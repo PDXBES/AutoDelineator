@@ -107,6 +107,7 @@ CHANGE LOG:
 - Better cleanup of geoprocessing tasks
 - Added info about "blocked" downloads to manual
 
-1/9/2014
+1/2/2014
+- Updated to ArcGIS 10.2
 - Allow disconnected inlets (e.g. infiltration inlets)
 - Fixed handling of disabled inlet nodes

@@ -1,5 +1,5 @@
 // DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -166,6 +166,11 @@ namespace DHI.Urban.Delineation
 
       throw new Exception("Could not create temporary file name!");
     }
+
+    /// <summary>
+    /// Progress reporting event of operations performed by this class.
+    /// </summary>
+    public event EventHandler<ProgressEventArgs> Progress;
 
     /// <summary>
     /// The sewer network.
@@ -398,6 +403,7 @@ namespace DHI.Urban.Delineation
 
     public void Preprocess()
     {
+      OnProgress("Preprocessing delineation inputs...");
       // Clear current results
       this.DrainagePoints = null;
       this.PunchedDEM = null;
@@ -411,23 +417,29 @@ namespace DHI.Urban.Delineation
       _DelineateInletCatchments();
 
       _DisposeTempDatasets();
+      OnProgress("Delineation inputs processed.");
     }
 
     private void _ExtractDrainagePoints()
     {
+      OnProgress("Extracting drainage points...");
+
       Dictionary<IPoint, int> drainagePoints = new Dictionary<IPoint, int>();
       if (_includeUpstreamEnds)
       {
+        OnProgress("Extract drainage points: Finding upstream ends...");
         drainagePoints = _ExtractUpstreamPipeEnds();
       }
 
       List<int> excludedOids = new List<int>();
       if (_excludeDownstreamEnds)
       {
+        OnProgress("Extract drainage points: Finding downstream ends...");
         excludedOids = _FindDownstreamPipeEnds();
       }
 
       //Add inlets
+      OnProgress("Extract drainage points: Adding inlets...");
       IFeatureCursor cursor = null;
       try
       {
@@ -459,6 +471,7 @@ namespace DHI.Urban.Delineation
       }
 
       //Create FeatureClass
+      OnProgress("Extract drainage points: Saving drainage points...");
       string outputPath = CreateTempFileName(_GetResultDir(), "DrainPoints", "shp");
       string outputName = System.IO.Path.GetFileNameWithoutExtension(outputPath);
       _drainClass = CreateShapefile(_GetResultDir(), outputName, esriGeometryType.esriGeometryPoint, new UnknownCoordinateSystemClass(), SetupOp.EID_FIELD_NAME);
@@ -479,6 +492,8 @@ namespace DHI.Urban.Delineation
       {
         UrbanDelineationExtension.ReleaseComObject(cursor);
       }
+
+      OnProgress(string.Format("{0} drainage points extracted.", drainagePoints.Count));
     }
 
     internal IFeatureClass CreateShapefile(string path, string name, esriGeometryType geometryType, ISpatialReference spatialRef, string idFieldName)
@@ -632,6 +647,8 @@ namespace DHI.Urban.Delineation
 
     private void _PunchDEM()
     {
+      OnProgress("Punching DEM with drainage points...");
+
       IConversionOp conversionOp = new RasterConversionOpClass();
       ILogicalOp logicalOp = new RasterMathOpsClass();
       IConditionalOp conditionalOp = new RasterConditionalOpClass();
@@ -678,10 +695,13 @@ namespace DHI.Urban.Delineation
         UrbanDelineationExtension.ReleaseComObject(conditionalOp);
         UrbanDelineationExtension.ReleaseComObject(logicalOp);
       }
+
+      OnProgress("DEM punched.");
     }
 
     private void _CalculateFlowDir()
     {
+      OnProgress("Filling DEM...");
       // - Fill & calculate flow direction
       IHydrologyOp hydroOp = new RasterHydrologyOpClass();
       IRasterMakerOp rasterMaker = new RasterMakerOpClass();
@@ -702,6 +722,8 @@ namespace DHI.Urban.Delineation
 
         object zLimit = null;
         fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
+
+        OnProgress("Calculating flow direction...");
         flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
 
         //Set holes to flowdir of 0
@@ -736,10 +758,12 @@ namespace DHI.Urban.Delineation
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
         UrbanDelineationExtension.ReleaseComObject(resultWorkspace);
       }
+      OnProgress("Flow direction calculated.");
     }
 
     private void _DelineateInletCatchments()
     {
+      OnProgress("Delineating inlet catchments...");
       //Determine output path
       string outputDir = _GetResultDir();
       string outputPathSmooth = SetupOp.CreateTempFileName(outputDir, "Catchments_smooth", ".shp");
@@ -756,6 +780,7 @@ namespace DHI.Urban.Delineation
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)hydroOp);
         seedGrid = (IGeoDataset)_DrainagePointsToSeedGrid(_drainClass, "SeedPts", SetupOp.EID_FIELD_NAME);
         catchmentGrid = hydroOp.Watershed((IGeoDataset)_flowDir, seedGrid);
+        OnProgress("Converting catchments to polygon...");
         IFeatureClass smoothCatchmentClass = RasterToPolygon(catchmentGrid, outputNameSmooth, outputDir, true);
         IFeatureClass detailedCatchmentClass = RasterToPolygon(catchmentGrid, outputNameDetailed, outputDir, false);
 
@@ -775,6 +800,7 @@ namespace DHI.Urban.Delineation
       {        
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
       }
+      OnProgress("Inlet catchments delineated.");
     }
 
     private IRasterDataset _DrainagePointsToSeedGrid(IFeatureClass featureClass, string baseName, string valueField)
@@ -789,7 +815,10 @@ namespace DHI.Urban.Delineation
         string path = System.IO.Path.Combine(demDataset.Workspace.PathName, demDataset.Name);
 
         gp.SetEnvironmentValue("snapRaster", path);
-        gp.SetEnvironmentValue("extent", path);
+
+        string extent = string.Format("{0} {1} {2} {3}", ((IGeoDataset2)demRasterDataset).Extent.XMin, ((IGeoDataset2)demRasterDataset).Extent.YMin, ((IGeoDataset2)demRasterDataset).Extent.XMax, ((IGeoDataset2)demRasterDataset).Extent.YMax);
+        gp.SetEnvironmentValue("extent", extent);
+
         gp.AddOutputsToMap = false;
 
         FeatureToRaster featureToRasterTool = new FeatureToRaster();
@@ -1051,5 +1080,17 @@ namespace DHI.Urban.Delineation
       }
     }
 
+    protected virtual void OnProgress(string message)
+    {
+      OnProgress(new ProgressEventArgs(message));
+    }
+
+    protected virtual void OnProgress(ProgressEventArgs eventArgs)
+    {
+      if (Progress != null)
+      {
+        Progress(this, eventArgs);
+      }
+    }
   }
 }
