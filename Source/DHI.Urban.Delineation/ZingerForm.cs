@@ -368,11 +368,11 @@ namespace DHI.Urban.Delineation
                 return false;
             }
 
-            if (fromLayer.FeatureClass == toLayer.FeatureClass)
-            {
-                MessageBox.Show(this, "The \"from\" layer and \"to\" layer are the same. Please select two different layers.", Properties.Resources.Caption_InvalidEntry, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
+            //if (fromLayer.FeatureClass == toLayer.FeatureClass)
+            //{
+            //    MessageBox.Show(this, "The \"from\" layer and \"to\" layer are the same. Please select two different layers.", Properties.Resources.Caption_InvalidEntry, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //    return false;
+            //}
 
             if (!(cbxFromField.SelectedValue is string))
             {
@@ -400,13 +400,13 @@ namespace DHI.Urban.Delineation
                 return false;
             }
 
-            ////IField fromField = fromLayer.FeatureClass.Fields.get_Field(fromFieldIndex);
-            ////IField toField = toLayer.FeatureClass.Fields.get_Field(toFieldIndex);
-            ////if (fromField.VarType != toField.VarType)
-            ////{
-            ////    MessageBox.Show(this, "The \"from\" field and the \"to\" field are not of the same type and can't be compared.", Properties.Resources.Caption_InvalidEntry, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            ////    return false;
-            ////}
+            //IField fromField = fromLayer.FeatureClass.Fields.get_Field(fromFieldIndex);
+            //IField toField = toLayer.FeatureClass.Fields.get_Field(toFieldIndex);
+            //if (fromField.VarType != toField.VarType)
+            //{
+            //    MessageBox.Show(this, "The \"from\" field and the \"to\" field are not of the same type and can't be compared.", Properties.Resources.Caption_InvalidEntry, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //    return false;
+            //}
 
             return true;
         }

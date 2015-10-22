@@ -1,4 +1,4 @@
 cd /d "%~dp0"
-%WINDIR%\Microsoft.NET\Framework\v2.0.50727\regasm /u DHI.Urban.Delineation.dll
+"%CommonProgramFiles%\ArcGIS\bin\ESRIRegAsm.exe" DHI.Urban.Delineation.dll /p:desktop /u
 
 pause
