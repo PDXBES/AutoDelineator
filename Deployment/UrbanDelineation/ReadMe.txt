@@ -1,4 +1,4 @@
-Install ArcGIS 9.3 with SP1 first.
+Install ArcGIS 10.1 with SP1 first.
 
 Then, save the files in this directory anywhere on your C:\ drive.
 
@@ -80,3 +80,33 @@ CHANGE LOG:
 11/1/2012
 - Updated documentation
 - Reverted flow tracing tool to red
+
+12/6/2012
+- Updated to ArcGIS 10.1
+
+12/7/2012
+- Fixed flow tracing tool (no longer over-generalizes flow path)
+
+2/21/2013
+- Fixed error when using source features that are in different projection from flow direction data
+
+2/27/2013
+- Always output smooth and detailed catchments
+
+4/11/2013
+- Clean up temporary files after using flow tracing tool
+- Allow from and to layer to be the same for zingers
+
+5/7/2013
+- Fixed bug with catchment creation
+- Added license file to deployment
+- Improved install scripts
+
+12/17/2013
+- Allows for infiltration inlets (inlets not connected to pipes)
+- Better cleanup of geoprocessing tasks
+- Added info about "blocked" downloads to manual
+
+1/9/2014
+- Allow disconnected inlets (e.g. infiltration inlets)
+- Fixed handling of disabled inlet nodes
