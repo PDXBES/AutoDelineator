@@ -185,7 +185,7 @@ namespace DHI.Urban.Delineation
       get { return _outletWatersheds; }
     }
 
-    public void DelineateCatchments()
+    public void DelineateCatchments(IList<int> junctionEids)
     {
       _CheckInput();
       _DisposeResults();
@@ -194,8 +194,15 @@ namespace DHI.Urban.Delineation
       if (_sourceLayer == null)
       {
         // If source layer is null, then we will trace from selected network nodes.
+        if (junctionEids == null)
+        {
+          _selectedJunctions = _GetSelectedJunctions();
+        }
+        else
+        {
+          _selectedJunctions = junctionEids;
+        }
 
-        _selectedJunctions = _GetSelectedJunctions();
         if (_selectedJunctions.Count == 0)
           throw new Exception("There are no features selected in the designated drainage network.");
 
@@ -235,6 +242,11 @@ namespace DHI.Urban.Delineation
       _OutputSettings();
 
       _DisposeTempDatasets();
+    }
+
+    public void DelineateCatchments()
+    {
+      this.DelineateCatchments(null);
     }
 
     private Dictionary<int, IGeometry> _DelineateSurfaceCatchments()
