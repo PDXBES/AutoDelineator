@@ -1,5 +1,5 @@
 ﻿// DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -87,7 +87,7 @@ namespace DHI.Urban.Delineation
                     }
                     finally
                     {
-                        UrbanDelineationExtension.ReleaseComObject(focusMap);
+//                        UrbanDelineationExtension.ReleaseComObject(focusMap);
                     }
                 }
 
@@ -129,7 +129,7 @@ namespace DHI.Urban.Delineation
 
             if (!layerUsed)
             {
-                UrbanDelineationExtension.ReleaseComObject(layer);
+//                UrbanDelineationExtension.ReleaseComObject(layer);
             }
         }
 
@@ -180,7 +180,7 @@ namespace DHI.Urban.Delineation
                     }
                     finally
                     {
-                        UrbanDelineationExtension.ReleaseComObject(sourceClass);
+//                        UrbanDelineationExtension.ReleaseComObject(sourceClass);
                     }
                 }
             }
@@ -210,7 +210,7 @@ namespace DHI.Urban.Delineation
                 activeViewEvents.ItemAdded -= new IActiveViewEvents_ItemAddedEventHandler(this._OnLayersChanged);
                 activeViewEvents.ItemDeleted -= new IActiveViewEvents_ItemDeletedEventHandler(this._OnLayersChanged);
                 activeViewEvents.ItemReordered -= new IActiveViewEvents_ItemReorderedEventHandler(this._OnLayersReordered);
-                UrbanDelineationExtension.ReleaseComObject(_activeView);
+//                UrbanDelineationExtension.ReleaseComObject(_activeView);
                 _activeView = null;
             }
 
@@ -218,7 +218,7 @@ namespace DHI.Urban.Delineation
             {
                 IDocumentEvents_Event pDocEvents = (IDocumentEvents_Event)_document;
                 pDocEvents.ActiveViewChanged -= new IDocumentEvents_ActiveViewChangedEventHandler(this._OnFocusMapChanged);
-                UrbanDelineationExtension.ReleaseComObject(_document);
+//                UrbanDelineationExtension.ReleaseComObject(_document);
                 _document = null;
             }
         }
@@ -468,14 +468,14 @@ namespace DHI.Urban.Delineation
                         }
                         finally
                         {
-                            UrbanDelineationExtension.ReleaseComObject(fromFeature);
+//                            UrbanDelineationExtension.ReleaseComObject(fromFeature);
                         }
                         fromFeature = cursor.NextFeature();
                     }
                 }
                 finally
                 {
-                    UrbanDelineationExtension.ReleaseComObject(cursor);
+//                    UrbanDelineationExtension.ReleaseComObject(cursor);
                 }
             }
         }
@@ -530,7 +530,8 @@ namespace DHI.Urban.Delineation
 
         private string _GetGraphicsLayerName(IFeatureClass featureClass)
         {
-            return string.Format("{0}: {1}", GRAPHICS_LAYER_PREFIX, UrbanDelineationExtension.GetDatasetPath((IDataset)featureClass));
+          return "";
+//            return string.Format("{0}: {1}", GRAPHICS_LAYER_PREFIX, UrbanDelineationExtension.GetDatasetPath((IDataset)featureClass));
         }
 
         private Dictionary<object, List<IPoint>> _GetToPointLookup(IFeatureLayer toLayer, string toFieldName, out Type toValueType)
@@ -568,14 +569,14 @@ namespace DHI.Urban.Delineation
                     }
                     finally
                     {
-                        UrbanDelineationExtension.ReleaseComObject(toFeature);
+ //                       UrbanDelineationExtension.ReleaseComObject(toFeature);
                     }
                     toFeature = cursor.NextFeature();
                 }
             }
             finally
             {
-                UrbanDelineationExtension.ReleaseComObject(cursor);
+//                UrbanDelineationExtension.ReleaseComObject(cursor);
             }
 
             return toPoints;

@@ -1,5 +1,5 @@
 // DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -121,12 +121,12 @@ namespace DHI.Urban.Delineation
       // 
       // cbxDEM
       // 
-      this.cbxDEM.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.cbxDEM.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.cbxDEM.DisplayMember = "Display";
       this.cbxDEM.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
       this.cbxDEM.FormattingEnabled = true;
-      this.cbxDEM.Location = new System.Drawing.Point(117, 135);
+      this.cbxDEM.Location = new System.Drawing.Point(118, 135);
       this.cbxDEM.Name = "cbxDEM";
       this.cbxDEM.Size = new System.Drawing.Size(187, 21);
       this.cbxDEM.TabIndex = 7;
@@ -135,8 +135,8 @@ namespace DHI.Urban.Delineation
       // 
       // cbxFlowDirGrid
       // 
-      this.cbxFlowDirGrid.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.cbxFlowDirGrid.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.cbxFlowDirGrid.DisplayMember = "Display";
       this.cbxFlowDirGrid.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
       this.cbxFlowDirGrid.FormattingEnabled = true;
@@ -159,7 +159,7 @@ namespace DHI.Urban.Delineation
       // chkIncludeUp
       // 
       this.chkIncludeUp.AutoSize = true;
-      this.chkIncludeUp.Location = new System.Drawing.Point(117, 66);
+      this.chkIncludeUp.Location = new System.Drawing.Point(118, 66);
       this.chkIncludeUp.Name = "chkIncludeUp";
       this.chkIncludeUp.Size = new System.Drawing.Size(159, 17);
       this.chkIncludeUp.TabIndex = 4;
@@ -168,12 +168,12 @@ namespace DHI.Urban.Delineation
       // 
       // cbxNetwork
       // 
-      this.cbxNetwork.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.cbxNetwork.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.cbxNetwork.DisplayMember = "Display";
       this.cbxNetwork.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
       this.cbxNetwork.FormattingEnabled = true;
-      this.cbxNetwork.Location = new System.Drawing.Point(117, 12);
+      this.cbxNetwork.Location = new System.Drawing.Point(118, 12);
       this.cbxNetwork.Name = "cbxNetwork";
       this.cbxNetwork.Size = new System.Drawing.Size(187, 21);
       this.cbxNetwork.TabIndex = 1;
@@ -182,12 +182,12 @@ namespace DHI.Urban.Delineation
       // 
       // cbxInlets
       // 
-      this.cbxInlets.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.cbxInlets.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.cbxInlets.DisplayMember = "Display";
       this.cbxInlets.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
       this.cbxInlets.FormattingEnabled = true;
-      this.cbxInlets.Location = new System.Drawing.Point(117, 39);
+      this.cbxInlets.Location = new System.Drawing.Point(118, 39);
       this.cbxInlets.Name = "cbxInlets";
       this.cbxInlets.Size = new System.Drawing.Size(187, 21);
       this.cbxInlets.TabIndex = 3;
@@ -208,8 +208,8 @@ namespace DHI.Urban.Delineation
       // 
       // btnPreprocess
       // 
-      this.btnPreprocess.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.btnPreprocess.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.btnPreprocess.Location = new System.Drawing.Point(118, 185);
       this.btnPreprocess.Name = "btnPreprocess";
       this.btnPreprocess.Size = new System.Drawing.Size(187, 23);
@@ -220,8 +220,8 @@ namespace DHI.Urban.Delineation
       // 
       // cbxCatchments
       // 
-      this.cbxCatchments.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.cbxCatchments.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.cbxCatchments.DisplayMember = "Display";
       this.cbxCatchments.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
       this.cbxCatchments.FormattingEnabled = true;
@@ -243,8 +243,8 @@ namespace DHI.Urban.Delineation
       // 
       // grpAdvanced
       // 
-      this.grpAdvanced.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-                  | System.Windows.Forms.AnchorStyles.Right)));
+      this.grpAdvanced.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
       this.grpAdvanced.BackColor = System.Drawing.SystemColors.ControlLight;
       this.grpAdvanced.Controls.Add(this.cbxCatchments);
       this.grpAdvanced.Controls.Add(this.lblInletCatchments);
@@ -260,7 +260,7 @@ namespace DHI.Urban.Delineation
       // chkExcludeDisabled
       // 
       this.chkExcludeDisabled.AutoSize = true;
-      this.chkExcludeDisabled.Location = new System.Drawing.Point(117, 89);
+      this.chkExcludeDisabled.Location = new System.Drawing.Point(118, 89);
       this.chkExcludeDisabled.Name = "chkExcludeDisabled";
       this.chkExcludeDisabled.Size = new System.Drawing.Size(141, 17);
       this.chkExcludeDisabled.TabIndex = 20;
