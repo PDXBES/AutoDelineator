@@ -693,14 +693,32 @@ namespace DHI.Urban.Delineation
               elementDescription.UserID_2 = oid;
               elementDescription.UserSubID_2 = subID;
 
-              IFeature netFeature = _setupOp.GeometricNetwork.get_NetworkFeature(elementDescription) as IFeature;
+              IFeature netFeature = _setupOp.GeometricNetwork.get_NetworkFeature(elementDescription) as IFeature; 
               int netIdField = netFeature.Fields.FindField(_idField);
               if (netIdField > -1)
               {
-                esriFieldType netFieldType = netFeature.Fields.get_Field(netIdField).Type;
-                if (netFieldType == esriFieldType.esriFieldTypeOID || netFieldType == watershedClass.Fields.get_Field(outletIdField).Type)
+                object netIdValue = netFeature.get_Value(netIdField);
+                if (netIdValue != DBNull.Value)
                 {
-                  idValue = netFeature.get_Value(netIdField);
+                  esriFieldType targetFieldType = watershedClass.Fields.get_Field(outletIdField).Type;
+                  switch (targetFieldType)
+                  {
+                    case esriFieldType.esriFieldTypeDouble:
+                      idValue = Convert.ToDouble(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeInteger:
+                      idValue = Convert.ToInt32(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSingle:
+                      idValue = Convert.ToSingle(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSmallInteger:
+                      idValue = Convert.ToInt16(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeString:
+                      idValue = Convert.ToString(netIdValue);
+                      break;
+                  }
                 }
               }
             }
@@ -716,17 +734,35 @@ namespace DHI.Urban.Delineation
               int sourceIdField = sourceFeature.Fields.FindField(_idField);
               if (sourceIdField > -1)
               {
-                esriFieldType sourceFieldType = sourceFeature.Fields.get_Field(sourceIdField).Type;
-                if (sourceFieldType == esriFieldType.esriFieldTypeOID || sourceFieldType == watershedClass.Fields.get_Field(outletIdField).Type)
+                object sourceIdValue = sourceFeature.get_Value(sourceIdField);
+                if (sourceIdValue != DBNull.Value)
                 {
-                  idValue = sourceFeature.get_Value(sourceIdField);
+                  esriFieldType targetFieldType = watershedClass.Fields.get_Field(outletIdField).Type;
+                  switch (targetFieldType)
+                  {
+                    case esriFieldType.esriFieldTypeDouble:
+                      idValue = Convert.ToDouble(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeInteger:
+                      idValue = Convert.ToInt32(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSingle:
+                      idValue = Convert.ToSingle(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSmallInteger:
+                      idValue = Convert.ToInt16(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeString:
+                      idValue = Convert.ToString(sourceIdValue);
+                      break;
+                  }
                 }
               }
             }
           }
 
           if (outletFieldAdded)
-            buffer.set_Value(outletIdField, idValue == null || idValue == DBNull.Value ? defaultIdValue : idValue);
+            buffer.set_Value(outletIdField, (idValue == null || idValue == DBNull.Value) ? defaultIdValue : idValue);
 
           cursor.InsertFeature(buffer);
         }
