@@ -111,3 +111,9 @@ CHANGE LOG:
 - Updated to ArcGIS 10.2
 - Allow disconnected inlets (e.g. infiltration inlets)
 - Fixed handling of disabled inlet nodes
+
+3/2/2016
+- allow programmatic selection of junctions for delineation
+- fixed issue with empty watershed geometries
+- improved delineation performance
+- correctly transfer numeric source ids (outlet label)
