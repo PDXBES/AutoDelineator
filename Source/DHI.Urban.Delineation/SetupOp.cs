@@ -1038,20 +1038,25 @@ namespace DHI.Urban.Delineation
           try
           {
             ISimpleJunctionFeature junction = inlet as ISimpleJunctionFeature;
-            bool isDownstream = junction.EdgeFeatureCount > 0;
-            for (int i = 0; i < junction.EdgeFeatureCount; i++)
-            {
-              netTopology.GetAdjacentEdge(junction.EID, i, out edgeId, out towardJunction);
-              if (!towardJunction)
-              {
-                isDownstream = false;
-                break;
-              }
-            }
 
-            if (isDownstream)
+            //Check that inlet is a valid part of network before testing if it is at downstream end
+            if (!inlet.Shape.IsEmpty && junction.EID != 0)
             {
-              endPointOidList.Add(inlet.OID);
+              bool isDownstream = junction.EdgeFeatureCount > 0;
+              for (int i = 0; i < junction.EdgeFeatureCount; i++)
+              {
+                netTopology.GetAdjacentEdge(junction.EID, i, out edgeId, out towardJunction);
+                if (!towardJunction)
+                {
+                  isDownstream = false;
+                  break;
+                }
+              }
+
+              if (isDownstream)
+              {
+                endPointOidList.Add(inlet.OID);
+              }
             }
           }
           finally
