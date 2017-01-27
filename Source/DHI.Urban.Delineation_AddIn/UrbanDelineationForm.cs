@@ -1,5 +1,5 @@
 // DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2017 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -207,7 +207,6 @@ namespace DHI.Urban.Delineation
 
           Delineator delineator = new Delineator();
           delineator.Setup = UrbanDelineationExtension.Extension.Setup;
-          delineator.Application = ArcMap.Application;
           delineator.OutletSource = cbxOutletSource.SelectedValue as IFeatureLayer;
           delineator.OutletIdField = cbxOutletField.SelectedValue as string;
           delineator.ExtendOverland = chkExtendOverland.Checked;
