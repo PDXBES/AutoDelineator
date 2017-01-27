@@ -22,9 +22,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Runtime.InteropServices;
+using ESRI.ArcGIS.ADF.Serialization;
+using ESRI.ArcGIS.ArcMapUI;
+using ESRI.ArcGIS.DataSourcesRaster;
 using ESRI.ArcGIS.Framework;
 using ESRI.ArcGIS.Geodatabase;
-using ESRI.ArcGIS.ArcMapUI;
 
 namespace DHI.Urban.Delineation
 {
@@ -179,16 +181,83 @@ namespace DHI.Urban.Delineation
 
     protected override void OnLoad(Stream inStrm)
     {
-      base.OnLoad(inStrm);
 
 #warning Not Implemented
     }
 
     protected override void OnSave(Stream outStrm)
     {
-      base.OnSave(outStrm);
+      // NOTE: Do not close or dispose BinaryWriter, as this will close the Stream
+      BinaryWriter writer = new BinaryWriter(outStrm);
+      int version = 3;
+      writer.Write(version);
 
-#warning Not Implemented
+      // ************** VERSION 3 **************
+
+      // Item 1: The Geometric Network for the underground conveyance system.
+      FeatureClassName networkDataset = null;
+      if (_setupOp.GeometricNetwork != null)
+      {
+        networkDataset = ((IDataset)_setupOp.GeometricNetwork.OrphanJunctionFeatureClass).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, networkDataset);
+
+      // Item 2: Inlet featureclass
+      FeatureClassName inletClass = null;
+      if (_setupOp.InletClass != null)
+      {
+        inletClass = ((IDataset)_setupOp.InletClass).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, inletClass);
+
+      // Item 3: DEM dataset
+      RasterDatasetName demDataset = null;
+      if (_setupOp.DEM != null)
+      {
+        IDataset dem = ((IRasterAnalysisProps)_setupOp.DEM).RasterDataset as IDataset;
+        if (dem != null)
+        {
+          demDataset = dem.FullName as RasterDatasetName;
+        }
+      }
+
+      PersistenceHelper.Save<RasterDatasetName>(outStrm, demDataset);
+
+      // Item 4: Whether to smooth boundaries
+      writer.Write(_setupOp.SmoothBoundaries);
+
+      // Item 5: Whether to include upstream pipe ends
+      writer.Write(_setupOp.IncludeUpstreamPipeEnds);
+
+      // Item 6: Whether to exclude downstream pipe ends
+      writer.Write(_setupOp.ExcludeDownstreamPipeEnds);
+
+      // Item 7: Flow direction dataset
+      RasterDatasetName flowDirDataset = null;
+      if (_setupOp.FlowDirection != null)
+      {
+        IDataset flowDir = ((IRasterAnalysisProps)_setupOp.FlowDirection).RasterDataset as IDataset;
+        if (flowDir != null)
+        {
+          flowDirDataset = flowDir.FullName as RasterDatasetName;
+        }
+      }
+
+      PersistenceHelper.Save<RasterDatasetName>(outStrm, flowDirDataset);
+
+      // Item 8: Catchment feature class
+      FeatureClassName catchmentClass = null;
+      if (_setupOp.Catchments != null)
+      {
+        catchmentClass = ((IDataset)_setupOp.Catchments).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, catchmentClass);
+
+      // Item 9: Whether to exclude disabled nodes
+      writer.Write(_setupOp.ExcludeDisabledNodes);
     }
   }
 }
