@@ -38,7 +38,6 @@ namespace DHI.Urban.Delineation
   {
     private bool _disposed;
     private SetupOp _setupOp;
-    private IApplication _application;
     private IList<int> _selectedJunctions = new List<int>();
     private bool _extendOverland = true;
     private bool _stopAtDisabled = true;
@@ -113,11 +112,6 @@ namespace DHI.Urban.Delineation
     public SetupOp Setup
     {
       set { _setupOp = value; }
-    }
-
-    public IApplication Application
-    {
-      set { _application = value; }
     }
 
     /// <summary>
@@ -1164,23 +1158,21 @@ namespace DHI.Urban.Delineation
 
       List<int> lstJunctionClassIDs = _GetNetworkClassIDs(esriFeatureType.esriFTSimpleJunction);
 
-      IMxDocument pMxDoc = null;
-      IMap pMap = null;
+      IMap map = null;
       try
       {
-        pMxDoc = this._application.Document as IMxDocument;
-        pMap = pMxDoc.FocusMap;
+        map = ArcMap.Document.FocusMap;
 
-        for (int i = 0; i < pMap.LayerCount; i++)
+        for (int i = 0; i < map.LayerCount; i++)
         {
-          ILayer pLayer = pMap.get_Layer(i);
-          if (pLayer is ICompositeLayer)
+          ILayer layer = map.get_Layer(i);
+          if (layer is ICompositeLayer)
           {
-            _GetJunctionLayers((ICompositeLayer)pLayer, lstJunctionClassIDs, lstJunctionLayers);
+            _GetJunctionLayers((ICompositeLayer)layer, lstJunctionClassIDs, lstJunctionLayers);
           }
-          else if (pLayer is IFeatureLayer)
+          else if (layer is IFeatureLayer)
           {
-            IFeatureLayer pFeatureLayer = (IFeatureLayer)pLayer;
+            IFeatureLayer pFeatureLayer = (IFeatureLayer)layer;
             if (pFeatureLayer.FeatureClass != null)
               if (lstJunctionClassIDs.Contains(pFeatureLayer.FeatureClass.FeatureClassID))
                 lstJunctionLayers.Add(pFeatureLayer);
@@ -1189,8 +1181,7 @@ namespace DHI.Urban.Delineation
       }
       finally
       {
-        UrbanDelineationExtension.ReleaseComObject(pMap);
-        UrbanDelineationExtension.ReleaseComObject(pMxDoc);
+        UrbanDelineationExtension.ReleaseComObject(map);
       }
 
       return lstJunctionLayers.ToArray();
