@@ -1,5 +1,5 @@
-// DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
+﻿// DHI Urban Catchment Delineation
+// Copyright (c) 2007, 2010, 2012-2017 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,44 +19,23 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Text;
-using ESRI.ArcGIS.ADF.CATIDs;
+using System.IO;
+using System.Runtime.InteropServices;
+using ESRI.ArcGIS.ADF.Serialization;
 using ESRI.ArcGIS.ArcMapUI;
 using ESRI.ArcGIS.DataSourcesRaster;
+using ESRI.ArcGIS.esriSystem;
 using ESRI.ArcGIS.Framework;
 using ESRI.ArcGIS.Geodatabase;
-using ESRI.ArcGIS.esriSystem;
-
-////using ESRI.ArcGIS.Carto;
-////using ESRI.ArcGIS.ArcMapUI;
 
 namespace DHI.Urban.Delineation
 {
-  [ComVisible(true)]
-  [Guid("4F3ADEE2-2CE7-475c-8636-F1155E61ECA4")]
-  public class UrbanDelineationExtension : IExtension, IPersistVariant
+  public class UrbanDelineationExtension : ESRI.ArcGIS.Desktop.AddIns.Extension
   {
     private static UrbanDelineationExtension _extension;
     private SetupOp _setupOp = null;
-    private IApplication _application = null;
     private IMxDocument _document = null;
-
-    #region "Component Category Registration"
-    [ComRegisterFunction()]
-    [ComVisible(false)]
-    static void Reg(string regKey)
-    {
-      MxExtension.Register(regKey);
-    }
-
-    [ComUnregisterFunction()]
-    [ComVisible(false)]
-    static void Unreg(string regKey)
-    {
-      MxExtension.Unregister(regKey);
-    }
-    #endregion
 
     /// <summary>
     /// A reference to the instantiated Urban Catchment Delienation Extension.
@@ -132,7 +111,7 @@ namespace DHI.Urban.Delineation
     {
       get
       {
-        ITemplates appTemplates = _application.Templates;
+        ITemplates appTemplates = ArcMap.Application.Templates;
         return appTemplates.get_Item(appTemplates.Count - 1);
       }
     }
@@ -155,29 +134,9 @@ namespace DHI.Urban.Delineation
       }
     }
 
-    #region IExtension Members
-
-    public string Name
+    protected override void OnStartup()
     {
-      get { return this.GetType().Name; }
-    }
-
-    public void Shutdown()
-    {
-      if (_setupOp != null)
-      {
-        _setupOp.Dispose();
-        _setupOp = null;
-      }
-    }
-
-    public void Startup(ref object initializationData)
-    {
-      _application = initializationData as IApplication;
-      if (_application == null)
-        return;
-
-      _document = _application.Document as IMxDocument;
+      _document = ArcMap.Document;
       if (_document != null)
       {
         IDocumentEvents_Event documentEvents = _document as IDocumentEvents_Event;
@@ -187,6 +146,15 @@ namespace DHI.Urban.Delineation
       }
 
       _extension = this;
+    }
+
+    protected override void OnShutdown()
+    {
+      if (_setupOp != null)
+      {
+        _setupOp.Dispose();
+        _setupOp = null;
+      }
     }
 
     private void _DocumentEvents_CloseDocument()
@@ -210,88 +178,67 @@ namespace DHI.Urban.Delineation
       _setupOp = null;
     }
 
-    #endregion
+    //TODO: Implement load and save
 
-    #region IPersistVariant Members
-
-    public UID ID
+    protected override void OnLoad(Stream inStrm)
     {
-      get
-      {
-        UID uid = new UID();
-        uid.Value = this.GetType().GUID.ToString("B");
-        return uid;
-      }
-    }
-
-    public void Load(IVariantStream stream)
-    {
-      if (System.IO.Path.GetExtension(this.MxDocFileName).ToUpper() == ".MXT")
-        return;
-
       SetupOp setupOp = null;
       try
       {
-        object firstValue = stream.Read();
-        if (firstValue != null)
+        // NOTE: Do not close or dispose BinaryReader, as this will close the Stream
+        BinaryReader reader = new BinaryReader(inStrm);
+        int version = reader.ReadInt32();
+
+        // NOTE: With change to Add-In architecture, this extension is NOT backwards compatible with versions 1 and 2
+
+        if (version == 3)
         {
-          int version = 0;
-          if (firstValue is string && (string)firstValue == "Version")
-            version = (int)stream.Read();
+          //// Version 3:
+          //// Item 1: FeatureClassName: The orphan junction feature class of the Geometric Network for the underground conveyance system.
+          //// Item 2: FeatureClassName: The inlet feature class
+          //// Item 3: RasterDatasetName: The DEM dataset
+          //// Item 4: Boolean: Whether to smooth boundaries
+          //// Item 5: Boolean: Whether to include upstream pipe ends
+          //// Item 6: Boolean: Whether to exclude downstream pipe ends
+          //// Item 7: RasterDatasetName: The flow direction dataset
+          //// Item 8: FeatureClassName: The catchment feature class
+          //// Item 9: Boolean: Whether to exclude disabled nodes
 
-          if (version >= 1)
-          {
-            setupOp = new SetupOp();
-            setupOp.ResultsDirectory = this.MxDocDirectoryName;
-            setupOp.ScratchDirectory = this.TemporaryDirectory;
+          setupOp = new SetupOp();
+          setupOp.ResultsDirectory = this.MxDocDirectoryName;
+          setupOp.ScratchDirectory = this.TemporaryDirectory;
 
-            // Version 1:
-            // Item 1: geometric network (saved as orphan junction feature class)
-            // Item 2: inlet featureclass
-            // Item 3: dem dataset
-            // Item 4: boolean--whether to smooth boundaries
-            // Item 5: boolean--whether to include upstream pipe ends
-            // Item 6: boolean--whether to exclude downstream pipe ends
-            // Item 7: flow direction dataset
-            // Item 8: catchment feature class
+          FeatureClassName networkJunctionName = null;
+          PersistenceHelper.Load<FeatureClassName>(inStrm, ref networkJunctionName);
+          INetworkClass junctionClass = _SafeOpen(networkJunctionName) as INetworkClass;
+          if (junctionClass != null)
+            setupOp.GeometricNetwork = junctionClass.GeometricNetwork;
 
-            IName junctionClassName = stream.Read() as IName;
-            INetworkClass junctionClass = _SafeOpen(junctionClassName) as INetworkClass;
-            if (junctionClass != null)
-              setupOp.GeometricNetwork = junctionClass.GeometricNetwork;
+          FeatureClassName inletClassName = null;
+          PersistenceHelper.Load<FeatureClassName>(inStrm, ref inletClassName);
+          setupOp.InletClass = _SafeOpen(inletClassName) as IFeatureClass;
 
-            IName inletClassName = stream.Read() as IName;
-            IFeatureClass inletClass = _SafeOpen(inletClassName) as IFeatureClass;
-            if (inletClass != null)
-              setupOp.InletClass = inletClass;
+          RasterDatasetName demName = null;
+          PersistenceHelper.Load<RasterDatasetName>(inStrm, ref demName);
+          IRasterDataset demDataset = _SafeOpen(demName) as IRasterDataset;
+          if (demDataset != null)
+            setupOp.DEM = demDataset.CreateDefaultRaster();
 
-            IName demName = stream.Read() as IName;
-            IRasterDataset demDataset = _SafeOpen(demName) as IRasterDataset;
-            if (demDataset != null)
-              setupOp.DEM = demDataset.CreateDefaultRaster();
+          setupOp.SmoothBoundaries = reader.ReadBoolean();
+          setupOp.IncludeUpstreamPipeEnds = reader.ReadBoolean();
+          setupOp.ExcludeDownstreamPipeEnds = reader.ReadBoolean();
 
-            setupOp.SmoothBoundaries = (bool)stream.Read();
-            setupOp.IncludeUpstreamPipeEnds = (bool)stream.Read();
-            setupOp.ExcludeDownstreamPipeEnds = (bool)stream.Read();
+          RasterDatasetName flowDirName = null;
+          PersistenceHelper.Load<RasterDatasetName>(inStrm, ref flowDirName);
+          IRasterDataset flowDirDataset = _SafeOpen(flowDirName) as IRasterDataset;
+          if (flowDirDataset != null)
+            setupOp.FlowDirection = flowDirDataset.CreateDefaultRaster();
 
-            IName flowDirName = stream.Read() as IName;
-            IRasterDataset flowDirDataset = _SafeOpen(flowDirName) as IRasterDataset;
-            if (flowDirDataset != null)
-              setupOp.FlowDirection = flowDirDataset.CreateDefaultRaster();
+          FeatureClassName catchmentClassName = null;
+          PersistenceHelper.Load<FeatureClassName>(inStrm, ref catchmentClassName);
+          setupOp.Catchments = _SafeOpen(catchmentClassName) as IFeatureClass;
 
-            IName catchmentClassName = stream.Read() as IName;
-            IFeatureClass catchmentClass = _SafeOpen(catchmentClassName) as IFeatureClass;
-            if (catchmentClass != null)
-              setupOp.Catchments = catchmentClass;
-
-            if (version >= 2)
-            {
-              // Version 2:
-              // Item 9: boolean--whether to exclude disabled nodes
-
-              setupOp.ExcludeDisabledNodes = (bool)stream.Read();
-            }
-          }
+          setupOp.ExcludeDisabledNodes = reader.ReadBoolean();
         }
 
         _setupOp = setupOp;
@@ -300,6 +247,81 @@ namespace DHI.Urban.Delineation
       {
         System.Diagnostics.Debug.WriteLine(ex.GetType().FullName + ": " + ex.Message);
       }
+    }
+
+    protected override void OnSave(Stream outStrm)
+    {
+      // NOTE: Do not close or dispose BinaryWriter, as this will close the Stream
+      BinaryWriter writer = new BinaryWriter(outStrm);
+      int version = 3;
+      writer.Write(version);
+
+      // ************** VERSION 3 **************
+
+      //// Item 1: FeatureClassName: The orphan junction feature class of the Geometric Network for the underground conveyance system.
+      FeatureClassName networkDataset = null;
+      if (_setupOp.GeometricNetwork != null)
+      {
+        networkDataset = ((IDataset)_setupOp.GeometricNetwork.OrphanJunctionFeatureClass).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, networkDataset);
+
+      //// Item 2: FeatureClassName: The inlet feature class
+      FeatureClassName inletClass = null;
+      if (_setupOp.InletClass != null)
+      {
+        inletClass = ((IDataset)_setupOp.InletClass).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, inletClass);
+
+      //// Item 3: RasterDatasetName: The DEM dataset
+      RasterDatasetName demDataset = null;
+      if (_setupOp.DEM != null)
+      {
+        IDataset dem = ((IRasterAnalysisProps)_setupOp.DEM).RasterDataset as IDataset;
+        if (dem != null)
+        {
+          demDataset = dem.FullName as RasterDatasetName;
+        }
+      }
+
+      PersistenceHelper.Save<RasterDatasetName>(outStrm, demDataset);
+
+      //// Item 4: Boolean: Whether to smooth boundaries
+      writer.Write(_setupOp.SmoothBoundaries);
+
+      //// Item 5: Boolean: Whether to include upstream pipe ends
+      writer.Write(_setupOp.IncludeUpstreamPipeEnds);
+
+      //// Item 6: Boolean: Whether to exclude downstream pipe ends
+      writer.Write(_setupOp.ExcludeDownstreamPipeEnds);
+
+      //// Item 7: RasterDatasetName: The flow direction dataset
+      RasterDatasetName flowDirDataset = null;
+      if (_setupOp.FlowDirection != null)
+      {
+        IDataset flowDir = ((IRasterAnalysisProps)_setupOp.FlowDirection).RasterDataset as IDataset;
+        if (flowDir != null)
+        {
+          flowDirDataset = flowDir.FullName as RasterDatasetName;
+        }
+      }
+
+      PersistenceHelper.Save<RasterDatasetName>(outStrm, flowDirDataset);
+
+      //// Item 8: FeatureClassName: The catchment feature class
+      FeatureClassName catchmentClass = null;
+      if (_setupOp.Catchments != null)
+      {
+        catchmentClass = ((IDataset)_setupOp.Catchments).FullName as FeatureClassName;
+      }
+
+      PersistenceHelper.Save<FeatureClassName>(outStrm, catchmentClass);
+
+      //// Item 9: Boolean: Whether to exclude disabled nodes
+      writer.Write(_setupOp.ExcludeDisabledNodes);
     }
 
     private object _SafeOpen(IName datasetName)
@@ -320,97 +342,5 @@ namespace DHI.Urban.Delineation
       }
       return result;
     }
-
-    public void Save(IVariantStream stream)
-    {
-      if (System.IO.Path.GetExtension(this.MxDocFileName).ToUpper() == ".MXT")
-        return;
-
-      if (_setupOp != null)
-      {
-        stream.Write("Version");
-        stream.Write(2);
-
-        // Item 1: geometric network (saved as orphan junction feature class)
-        if (_setupOp.GeometricNetwork != null)
-        {
-          stream.Write(((IDataset)_setupOp.GeometricNetwork.OrphanJunctionFeatureClass).FullName);
-        }
-        else
-        {
-          stream.Write(null);
-        }
-
-        // Item 2: inlet featureclass
-        if (_setupOp.InletClass != null)
-        {
-          stream.Write(((IDataset)_setupOp.InletClass).FullName);
-        }
-        else
-        {
-          stream.Write(null);
-        }
-
-        // Item 3: dem dataset
-        if (_setupOp.DEM != null)
-        {
-          IDataset demDataset = ((IRasterAnalysisProps)_setupOp.DEM).RasterDataset as IDataset;
-          if (demDataset != null)
-          {
-            stream.Write(demDataset.FullName);
-          }
-          else
-          {
-            stream.Write(null);
-          }
-        }
-        else
-        {
-          stream.Write(null);
-        }
-
-        // Item 4: boolean--whether to smooth boundaries
-        stream.Write(_setupOp.SmoothBoundaries);
-
-        // Item 5: boolean--whether to include upstream pipe ends
-        stream.Write(_setupOp.IncludeUpstreamPipeEnds);
-
-        // Item 6: boolean--whether to exclude downstream pipe ends
-        stream.Write(_setupOp.ExcludeDownstreamPipeEnds);
-
-        // Item 7: flow direction dataset
-        if (_setupOp.FlowDirection != null)
-        {
-          IDataset flowDirDataset = ((IRasterAnalysisProps)_setupOp.FlowDirection).RasterDataset as IDataset;
-          if (flowDirDataset != null)
-          {
-            stream.Write(flowDirDataset.FullName);
-          }
-          else
-          {
-            stream.Write(null);
-          }
-        }
-        else
-        {
-          stream.Write(null);
-        }
-
-        // Item 8: catchment feature class
-        if (_setupOp.Catchments != null)
-        {
-          stream.Write(((IDataset)_setupOp.Catchments).FullName);
-        }
-        else
-        {
-          stream.Write(null);
-        }
-
-        // Item 9: boolean--whether to exclude disabled nodes
-        stream.Write(_setupOp.ExcludeDisabledNodes);
-      }
-    }
-
-    #endregion
   }
 }
