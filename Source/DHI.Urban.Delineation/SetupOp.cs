@@ -721,7 +721,11 @@ namespace DHI.Urban.Delineation
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)logicalOp);
 
         object zLimit = null;
+        ((IRasterAnalysisEnvironment)hydroOp).Mask = (IGeoDataset)_punchedDEM;
         fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
+        ((IRasterAnalysisEnvironment)hydroOp).Mask = null;
+
+        //IGeoDataset maskedFill = conditionalOp.SetNull(logicalOp.IsNull((IGeoDataset)_punchedDEM), fillTemp);
 
         OnProgress("Calculating flow direction...");
         flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
