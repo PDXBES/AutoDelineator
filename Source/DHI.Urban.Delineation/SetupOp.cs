@@ -708,6 +708,7 @@ namespace DHI.Urban.Delineation
       ILogicalOp logicalOp = new RasterMathOpsClass();
       IConditionalOp conditionalOp = new RasterConditionalOpClass();
       IGeoDataset fillTemp = null;
+      IGeoDataset maskedFill = null;
       IGeoDataset flowTemp = null;
       IGeoDataset flowTemp2 = null;
       IGeoDataset flowTemp3 = null;
@@ -721,27 +722,26 @@ namespace DHI.Urban.Delineation
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)logicalOp);
 
         object zLimit = null;
-        ((IRasterAnalysisEnvironment)hydroOp).Mask = (IGeoDataset)_punchedDEM;
         fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
-        ((IRasterAnalysisEnvironment)hydroOp).Mask = null;
 
-        //IGeoDataset maskedFill = conditionalOp.SetNull(logicalOp.IsNull((IGeoDataset)_punchedDEM), fillTemp);
+        // With switch to 10.3.1, ArcGIS is suddenly setting NoData values to the maximum value with the Fill command, not sure why--probably a bug, this sets them back to null
+        maskedFill = conditionalOp.SetNull(logicalOp.IsNull((IGeoDataset)_punchedDEM), fillTemp);
 
         OnProgress("Calculating flow direction...");
-        flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
+        flowTemp = hydroOp.FlowDirection((IGeoDataset)maskedFill, false, true);
 
         //Set holes to flowdir of 0
         object boxedFlowTemp = flowTemp;
         zeroRaster = rasterMaker.MakeConstant(0.0, true);
-        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)fillTemp), zeroRaster, ref boxedFlowTemp);
+        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)_punchedDEM), zeroRaster, ref boxedFlowTemp);
         flowTemp3 = conditionalOp.SetNull(logicalOp.IsNull((IGeoDataset)_dem), flowTemp2);
 
         //Make output permanent
         resultWorkspace = GetResultRasterWorkspace();
-        ITemporaryDataset tempFillDataset = ((IRasterAnalysisProps)fillTemp).RasterDataset as ITemporaryDataset;
+        ITemporaryDataset fillDataset = ((IRasterAnalysisProps)maskedFill).RasterDataset as ITemporaryDataset;
         string fillPath = CreateTempFileName(_GetResultDir(), "filldem", "");
         string fillFileName = System.IO.Path.GetFileName(fillPath);
-        tempFillDataset.MakePermanentAs(fillFileName, resultWorkspace, "GRID");
+        fillDataset.MakePermanentAs(fillFileName, resultWorkspace, "GRID");
         _filledDEM = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(fillFileName).CreateDefaultRaster() as IRaster;
 
         ITemporaryDataset tempFlowDataset = ((IRasterAnalysisProps)flowTemp3).RasterDataset as ITemporaryDataset;
@@ -752,6 +752,7 @@ namespace DHI.Urban.Delineation
       }
       finally
       {
+        UrbanDelineationExtension.ReleaseComObject(fillTemp);
         UrbanDelineationExtension.ReleaseComObject(flowTemp);
         UrbanDelineationExtension.ReleaseComObject(flowTemp2);
         UrbanDelineationExtension.ReleaseComObject(flowTemp3);
