@@ -251,6 +251,9 @@ namespace DHI.Urban.Delineation
 
     protected override void OnSave(Stream outStrm)
     {
+      if (_setupOp == null)
+        return;
+
       // NOTE: Do not close or dispose BinaryWriter, as this will close the Stream
       BinaryWriter writer = new BinaryWriter(outStrm);
       int version = 3;
