@@ -652,7 +652,6 @@ namespace DHI.Urban.Delineation
       IConversionOp conversionOp = new RasterConversionOpClass();
       ILogicalOp logicalOp = new RasterMathOpsClass();
       IConditionalOp conditionalOp = new RasterConditionalOpClass();
-      IRasterMakerOp rasterMaker = new RasterMakerOpClass();
       IGeoDataset punchedDEM = null;
       IWorkspace tempWorkspace = null;
       IWorkspace resultWorkspace = null;
