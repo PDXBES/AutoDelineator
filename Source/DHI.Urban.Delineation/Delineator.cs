@@ -38,7 +38,6 @@ namespace DHI.Urban.Delineation
   {
     private bool _disposed;
     private SetupOp _setupOp;
-    private IApplication _application;
     private IList<int> _selectedJunctions = new List<int>();
     private bool _extendOverland = true;
     private bool _stopAtDisabled = true;
@@ -47,6 +46,7 @@ namespace DHI.Urban.Delineation
     private IFeatureLayer _sourceLayer;
     private string _idField = string.Empty;
     private string _outIdField = string.Empty;
+    private Dictionary<int, List<IGeometry>> _catchmentShapes = null;
     private IFeatureClass _outletWatersheds;
     private List<IDataset> _tempDatasets = new List<IDataset>(); // Used to delay disposal of certain temp datasets.
 
@@ -112,11 +112,6 @@ namespace DHI.Urban.Delineation
     public SetupOp Setup
     {
       set { _setupOp = value; }
-    }
-
-    public IApplication Application
-    {
-      set { _application = value; }
     }
 
     /// <summary>
@@ -185,17 +180,25 @@ namespace DHI.Urban.Delineation
       get { return _outletWatersheds; }
     }
 
-    public void DelineateCatchments()
+    public void DelineateCatchments(IList<int> junctionEids)
     {
       _CheckInput();
       _DisposeResults();
+      _catchmentShapes = null;
 
       Dictionary<int, IGeometry> watershedShapes = new Dictionary<int, IGeometry>();
       if (_sourceLayer == null)
       {
         // If source layer is null, then we will trace from selected network nodes.
+        if (junctionEids == null)
+        {
+          _selectedJunctions = _GetSelectedJunctions();
+        }
+        else
+        {
+          _selectedJunctions = junctionEids;
+        }
 
-        _selectedJunctions = _GetSelectedJunctions();
         if (_selectedJunctions.Count == 0)
           throw new Exception("There are no features selected in the designated drainage network.");
 
@@ -235,6 +238,11 @@ namespace DHI.Urban.Delineation
       _OutputSettings();
 
       _DisposeTempDatasets();
+    }
+
+    public void DelineateCatchments()
+    {
+      this.DelineateCatchments(null);
     }
 
     private Dictionary<int, IGeometry> _DelineateSurfaceCatchments()
@@ -545,6 +553,11 @@ namespace DHI.Urban.Delineation
 
     private int[] _FindOutlets(IGeometry watershedShape)
     {
+      if (watershedShape.IsEmpty)
+      {
+        return new int[0];
+      }
+
       List<int> outletEIDs = new List<int>();
 
       INetTopology netTopology = _setupOp.GeometricNetwork.Network as INetTopology;
@@ -674,14 +687,32 @@ namespace DHI.Urban.Delineation
               elementDescription.UserID_2 = oid;
               elementDescription.UserSubID_2 = subID;
 
-              IFeature netFeature = _setupOp.GeometricNetwork.get_NetworkFeature(elementDescription) as IFeature;
+              IFeature netFeature = _setupOp.GeometricNetwork.get_NetworkFeature(elementDescription) as IFeature; 
               int netIdField = netFeature.Fields.FindField(_idField);
               if (netIdField > -1)
               {
-                esriFieldType netFieldType = netFeature.Fields.get_Field(netIdField).Type;
-                if (netFieldType == esriFieldType.esriFieldTypeOID || netFieldType == watershedClass.Fields.get_Field(outletIdField).Type)
+                object netIdValue = netFeature.get_Value(netIdField);
+                if (netIdValue != DBNull.Value)
                 {
-                  idValue = netFeature.get_Value(netIdField);
+                  esriFieldType targetFieldType = watershedClass.Fields.get_Field(outletIdField).Type;
+                  switch (targetFieldType)
+                  {
+                    case esriFieldType.esriFieldTypeDouble:
+                      idValue = Convert.ToDouble(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeInteger:
+                      idValue = Convert.ToInt32(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSingle:
+                      idValue = Convert.ToSingle(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSmallInteger:
+                      idValue = Convert.ToInt16(netIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeString:
+                      idValue = Convert.ToString(netIdValue);
+                      break;
+                  }
                 }
               }
             }
@@ -697,17 +728,35 @@ namespace DHI.Urban.Delineation
               int sourceIdField = sourceFeature.Fields.FindField(_idField);
               if (sourceIdField > -1)
               {
-                esriFieldType sourceFieldType = sourceFeature.Fields.get_Field(sourceIdField).Type;
-                if (sourceFieldType == esriFieldType.esriFieldTypeOID || sourceFieldType == watershedClass.Fields.get_Field(outletIdField).Type)
+                object sourceIdValue = sourceFeature.get_Value(sourceIdField);
+                if (sourceIdValue != DBNull.Value)
                 {
-                  idValue = sourceFeature.get_Value(sourceIdField);
+                  esriFieldType targetFieldType = watershedClass.Fields.get_Field(outletIdField).Type;
+                  switch (targetFieldType)
+                  {
+                    case esriFieldType.esriFieldTypeDouble:
+                      idValue = Convert.ToDouble(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeInteger:
+                      idValue = Convert.ToInt32(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSingle:
+                      idValue = Convert.ToSingle(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeSmallInteger:
+                      idValue = Convert.ToInt16(sourceIdValue);
+                      break;
+                    case esriFieldType.esriFieldTypeString:
+                      idValue = Convert.ToString(sourceIdValue);
+                      break;
+                  }
                 }
               }
             }
           }
 
           if (outletFieldAdded)
-            buffer.set_Value(outletIdField, idValue == null || idValue == DBNull.Value ? defaultIdValue : idValue);
+            buffer.set_Value(outletIdField, (idValue == null || idValue == DBNull.Value) ? defaultIdValue : idValue);
 
           cursor.InsertFeature(buffer);
         }
@@ -896,60 +945,75 @@ namespace DHI.Urban.Delineation
     private IGeometry _MergeCatchments(int[] inletEIDs)
     {
       IGeometry watershedShape = new PolygonClass();
-      List<IGeometry> catchmentShapes = new List<IGeometry>(inletEIDs.Length);
 
-      IFeatureCursor cursor = null;
-      try
+      if (_catchmentShapes == null)
       {
-        List<int> inletEIDsList = new List<int>(inletEIDs);
-        inletEIDsList.Sort();
-
-        int gridCodeField = _setupOp.Catchments.FindField("GridCode");
-        object dbValue = null;
-        int gridCode = -1;
-
-        //Get all watershed shapes
-        cursor = _setupOp.Catchments.Search(null, true);
-        IFeature catchment = cursor.NextFeature();
-        while (catchment != null)
+        _catchmentShapes = new Dictionary<int, List<IGeometry>>();
+        IFeatureCursor cursor = null;
+        try
         {
-          try
+          int gridCodeField = _setupOp.Catchments.FindField("GridCode");
+          object dbValue = null;
+          int gridCode = -1;
+
+          //Get all watershed shapes
+          cursor = _setupOp.Catchments.Search(null, true);
+          IFeature catchment = cursor.NextFeature();
+          while (catchment != null)
           {
-            dbValue = catchment.get_Value(gridCodeField);
-            gridCode = Convert.IsDBNull(dbValue) ? -1 : Convert.ToInt32(dbValue);
-            if (inletEIDsList.BinarySearch(gridCode) >= 0)
-              catchmentShapes.Add(catchment.ShapeCopy);
+            try
+            {
+              dbValue = catchment.get_Value(gridCodeField);
+              gridCode = Convert.IsDBNull(dbValue) ? -1 : Convert.ToInt32(dbValue);
+              if (_catchmentShapes.ContainsKey(gridCode))
+              {
+                _catchmentShapes[gridCode].Add(catchment.ShapeCopy);
+              }
+              else
+              {
+                _catchmentShapes[gridCode] = new List<IGeometry>() { catchment.ShapeCopy };
+              }
+            }
+            finally
+            {
+              UrbanDelineationExtension.ReleaseComObject(catchment);
+            }
+            catchment = cursor.NextFeature();
           }
-          finally
-          {
-            UrbanDelineationExtension.ReleaseComObject(catchment);
-          }
-          catchment = cursor.NextFeature();
         }
-
-        //Merge shapes
-        while (catchmentShapes.Count > 1)
+        finally
         {
-          List<IGeometry> tempList = new List<IGeometry>(catchmentShapes.Count / 2);
-          for (int i = 0; i < catchmentShapes.Count; i += 2)
-          {
-            if (i < catchmentShapes.Count - 1)
-              tempList.Add(((ITopologicalOperator)catchmentShapes[i]).Union(catchmentShapes[i + 1]));
-            else
-              tempList.Add(catchmentShapes[i]); //Last shape in odd numbered list
-          }
-          catchmentShapes = tempList;
-        }
-
-        if (catchmentShapes.Count == 1)
-        {
-          watershedShape = catchmentShapes[0];
-          watershedShape.SpatialReference = ((IGeoDataset)_setupOp.Catchments).SpatialReference;
+          UrbanDelineationExtension.ReleaseComObject(cursor);
         }
       }
-      finally
+
+      List<IGeometry> catchmentShapes = new List<IGeometry>(inletEIDs.Length);
+      foreach(int inletEID in inletEIDs)
       {
-        UrbanDelineationExtension.ReleaseComObject(cursor);
+        if (_catchmentShapes.ContainsKey(inletEID))
+        {
+          catchmentShapes.AddRange(_catchmentShapes[inletEID]);
+        }
+      }
+
+      //Merge shapes
+      while (catchmentShapes.Count > 1)
+      {
+        List<IGeometry> tempList = new List<IGeometry>(catchmentShapes.Count / 2);
+        for (int i = 0; i < catchmentShapes.Count; i += 2)
+        {
+          if (i < catchmentShapes.Count - 1)
+            tempList.Add(((ITopologicalOperator)catchmentShapes[i]).Union(catchmentShapes[i + 1]));
+          else
+            tempList.Add(catchmentShapes[i]); //Last shape in odd numbered list
+        }
+        catchmentShapes = tempList;
+      }
+
+      if (catchmentShapes.Count == 1)
+      {
+        watershedShape = catchmentShapes[0];
+        watershedShape.SpatialReference = ((IGeoDataset)_setupOp.Catchments).SpatialReference;
       }
 
       return watershedShape;
@@ -1076,7 +1140,8 @@ namespace DHI.Urban.Delineation
         int iOID = pOIDs.Next();
         while (iOID != -1)
         {
-          lstJunctionIDs.Add(pNetElements.GetEID(iClassID, iOID, -1, esriElementType.esriETJunction));
+          int junctionId = pNetElements.GetEID(iClassID, iOID, -1, esriElementType.esriETJunction);
+          lstJunctionIDs.Add(junctionId);
           iOID = pOIDs.Next();
         }
       }
@@ -1093,23 +1158,21 @@ namespace DHI.Urban.Delineation
 
       List<int> lstJunctionClassIDs = _GetNetworkClassIDs(esriFeatureType.esriFTSimpleJunction);
 
-      IMxDocument pMxDoc = null;
-      IMap pMap = null;
+      IMap map = null;
       try
       {
-        pMxDoc = this._application.Document as IMxDocument;
-        pMap = pMxDoc.FocusMap;
+        map = ArcMap.Document.FocusMap;
 
-        for (int i = 0; i < pMap.LayerCount; i++)
+        for (int i = 0; i < map.LayerCount; i++)
         {
-          ILayer pLayer = pMap.get_Layer(i);
-          if (pLayer is ICompositeLayer)
+          ILayer layer = map.get_Layer(i);
+          if (layer is ICompositeLayer)
           {
-            _GetJunctionLayers((ICompositeLayer)pLayer, lstJunctionClassIDs, lstJunctionLayers);
+            _GetJunctionLayers((ICompositeLayer)layer, lstJunctionClassIDs, lstJunctionLayers);
           }
-          else if (pLayer is IFeatureLayer)
+          else if (layer is IFeatureLayer)
           {
-            IFeatureLayer pFeatureLayer = (IFeatureLayer)pLayer;
+            IFeatureLayer pFeatureLayer = (IFeatureLayer)layer;
             if (pFeatureLayer.FeatureClass != null)
               if (lstJunctionClassIDs.Contains(pFeatureLayer.FeatureClass.FeatureClassID))
                 lstJunctionLayers.Add(pFeatureLayer);
@@ -1118,8 +1181,7 @@ namespace DHI.Urban.Delineation
       }
       finally
       {
-        UrbanDelineationExtension.ReleaseComObject(pMap);
-        UrbanDelineationExtension.ReleaseComObject(pMxDoc);
+        UrbanDelineationExtension.ReleaseComObject(map);
       }
 
       return lstJunctionLayers.ToArray();

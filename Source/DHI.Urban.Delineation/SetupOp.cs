@@ -1,5 +1,5 @@
 // DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2017 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -651,17 +651,14 @@ namespace DHI.Urban.Delineation
 
       IConversionOp conversionOp = new RasterConversionOpClass();
       ILogicalOp logicalOp = new RasterMathOpsClass();
-      IConditionalOp conditionalOp = new RasterConditionalOpClass();
-      IGeoDataset punchedDEM = null;
+      IGeoDataset inletLocations = null;
       IWorkspace tempWorkspace = null;
-      IWorkspace resultWorkspace = null;
       try
       {
         tempWorkspace = GetTempRasterWorkspace();
 
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)conversionOp);
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)logicalOp);
-        SetAnalysisEnvironment((IRasterAnalysisEnvironment)conditionalOp);
 
         IFeatureClassDescriptor sourceDescriptor = new FeatureClassDescriptorClass();
         sourceDescriptor.Create(_drainClass, null, _drainClass.OIDFieldName);
@@ -672,27 +669,19 @@ namespace DHI.Urban.Delineation
         try
         {
           pRasterDataset = conversionOp.ToRasterDataset((IGeoDataset)sourceDescriptor, "GRID", tempWorkspace, gridName);
-          punchedDEM = conditionalOp.SetNull(logicalOp.BooleanNot(logicalOp.IsNull((IGeoDataset)pRasterDataset)), (IGeoDataset)_dem);
-
-          resultWorkspace = GetResultRasterWorkspace();
-          ITemporaryDataset tempDataset = ((IRasterAnalysisProps)punchedDEM).RasterDataset as ITemporaryDataset;
+          inletLocations = logicalOp.BooleanNot(logicalOp.IsNull((IGeoDataset)pRasterDataset));
           string outputPath = CreateTempFileName(_GetResultDir(), "punchdem", "");
-          string outputFileName = System.IO.Path.GetFileName(outputPath);
-          tempDataset.MakePermanentAs(outputFileName, resultWorkspace, "GRID");
-          _punchedDEM = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(outputFileName).CreateDefaultRaster();
+          _punchedDEM = GeoprocessingTools.SetNull((IRaster)inletLocations, _dem, outputPath);
         }
         finally
         {
-          _MarkForDisposal((IDataset)pRasterDataset);          
+          _MarkForDisposal((IDataset)pRasterDataset);
         }
       }
       finally
       {
         UrbanDelineationExtension.ReleaseComObject(tempWorkspace);
-        UrbanDelineationExtension.ReleaseComObject(resultWorkspace);
-        UrbanDelineationExtension.ReleaseComObject(punchedDEM);
         UrbanDelineationExtension.ReleaseComObject(conversionOp);
-        UrbanDelineationExtension.ReleaseComObject(conditionalOp);
         UrbanDelineationExtension.ReleaseComObject(logicalOp);
       }
 
@@ -702,6 +691,7 @@ namespace DHI.Urban.Delineation
     private void _CalculateFlowDir()
     {
       OnProgress("Filling DEM...");
+
       // - Fill & calculate flow direction
       IHydrologyOp hydroOp = new RasterHydrologyOpClass();
       IRasterMakerOp rasterMaker = new RasterMakerOpClass();
@@ -710,7 +700,7 @@ namespace DHI.Urban.Delineation
       IGeoDataset fillTemp = null;
       IGeoDataset flowTemp = null;
       IGeoDataset flowTemp2 = null;
-      IGeoDataset flowTemp3 = null;
+      IGeoDataset demNulls = null;
       IGeoDataset zeroRaster = null;
       IWorkspace resultWorkspace = null;
       try
@@ -723,15 +713,6 @@ namespace DHI.Urban.Delineation
         object zLimit = null;
         fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
 
-        OnProgress("Calculating flow direction...");
-        flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
-
-        //Set holes to flowdir of 0
-        object boxedFlowTemp = flowTemp;
-        zeroRaster = rasterMaker.MakeConstant(0.0, true);
-        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)fillTemp), zeroRaster, ref boxedFlowTemp);
-        flowTemp3 = conditionalOp.SetNull(logicalOp.IsNull((IGeoDataset)_dem), flowTemp2);
-
         //Make output permanent
         resultWorkspace = GetResultRasterWorkspace();
         ITemporaryDataset tempFillDataset = ((IRasterAnalysisProps)fillTemp).RasterDataset as ITemporaryDataset;
@@ -740,17 +721,22 @@ namespace DHI.Urban.Delineation
         tempFillDataset.MakePermanentAs(fillFileName, resultWorkspace, "GRID");
         _filledDEM = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(fillFileName).CreateDefaultRaster() as IRaster;
 
-        ITemporaryDataset tempFlowDataset = ((IRasterAnalysisProps)flowTemp3).RasterDataset as ITemporaryDataset;
+        OnProgress("Calculating flow direction...");
+        flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
+
+        //Set holes to flowdir of 0
+        object boxedFlowTemp = flowTemp;
+        zeroRaster = rasterMaker.MakeConstant(0.0, true);
+        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)fillTemp), zeroRaster, ref boxedFlowTemp);
+        demNulls = logicalOp.IsNull((IGeoDataset)_dem);
         string flowPath = CreateTempFileName(_GetResultDir(), "flowdir", "");
-        string flowFileName = System.IO.Path.GetFileName(flowPath);
-        tempFlowDataset.MakePermanentAs(flowFileName, resultWorkspace, "GRID");
-        _flowDir = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(flowFileName).CreateDefaultRaster() as IRaster;
+        _flowDir = GeoprocessingTools.SetNull((IRaster)demNulls, (IRaster)flowTemp2, flowPath);
       }
       finally
       {
         UrbanDelineationExtension.ReleaseComObject(flowTemp);
         UrbanDelineationExtension.ReleaseComObject(flowTemp2);
-        UrbanDelineationExtension.ReleaseComObject(flowTemp3);
+        UrbanDelineationExtension.ReleaseComObject(demNulls);
         UrbanDelineationExtension.ReleaseComObject(zeroRaster);
         UrbanDelineationExtension.ReleaseComObject(conditionalOp);
         UrbanDelineationExtension.ReleaseComObject(logicalOp);
@@ -758,6 +744,7 @@ namespace DHI.Urban.Delineation
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
         UrbanDelineationExtension.ReleaseComObject(resultWorkspace);
       }
+
       OnProgress("Flow direction calculated.");
     }
 
@@ -797,7 +784,7 @@ namespace DHI.Urban.Delineation
         _MarkForDisposal(catchmentGrid as IDataset);
       }
       finally
-      {        
+      {
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
       }
       OnProgress("Inlet catchments delineated.");
@@ -1038,20 +1025,25 @@ namespace DHI.Urban.Delineation
           try
           {
             ISimpleJunctionFeature junction = inlet as ISimpleJunctionFeature;
-            bool isDownstream = junction.EdgeFeatureCount > 0;
-            for (int i = 0; i < junction.EdgeFeatureCount; i++)
-            {
-              netTopology.GetAdjacentEdge(junction.EID, i, out edgeId, out towardJunction);
-              if (!towardJunction)
-              {
-                isDownstream = false;
-                break;
-              }
-            }
 
-            if (isDownstream)
+            //Check that inlet is a valid part of network before testing if it is at downstream end
+            if (!inlet.Shape.IsEmpty && junction.EID != 0)
             {
-              endPointOidList.Add(inlet.OID);
+              bool isDownstream = junction.EdgeFeatureCount > 0;
+              for (int i = 0; i < junction.EdgeFeatureCount; i++)
+              {
+                netTopology.GetAdjacentEdge(junction.EID, i, out edgeId, out towardJunction);
+                if (!towardJunction)
+                {
+                  isDownstream = false;
+                  break;
+                }
+              }
+
+              if (isDownstream)
+              {
+                endPointOidList.Add(inlet.OID);
+              }
             }
           }
           finally

@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DHI.Urban.Delineation", "DHI.Urban.Delineation.csproj", "{771EFD98-2A86-4D85-B307-DCD05618FA02}"
 EndProject
 Global

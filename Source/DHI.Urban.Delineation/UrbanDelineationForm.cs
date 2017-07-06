@@ -1,5 +1,5 @@
 // DHI Urban Catchment Delineation
-// Copyright (c) 2007, 2010, 2012-2014 DHI Water & Environment, Inc.
+// Copyright (c) 2007, 2010, 2012-2017 DHI Water & Environment, Inc.
 // Author: Arnold Engelmann, ahe@dhigroup.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -43,15 +43,13 @@ namespace DHI.Urban.Delineation
     private static bool _lastSnapToPourPoint = true;
     private static double _lastSnapDistance = 12.0;
 
-    private IApplication _application;
     private IMxDocument _document;
     private IActiveView _activeView;
     private bool _updatingLayers = false;
 
-    public UrbanDelineationForm(IApplication application)
+    public UrbanDelineationForm()
     {
-      _application = application;
-      _document = _application.Document as IMxDocument;
+      _document = ArcMap.Document;
       _activeView = _document.ActiveView;
 
       InitializeComponent();
@@ -95,15 +93,12 @@ namespace DHI.Urban.Delineation
 
     protected override void OnLoad(EventArgs e)
     {
-      if (_application != null)
+      if (_document != null)
       {
-        if (_document != null)
-        {
-          _SetupDocumentEvents();
-        }
-
-        _UpdateComboBoxes();
+        _SetupDocumentEvents();
       }
+
+      _UpdateComboBoxes();
 
       chkExtendOverland.Checked = UrbanDelineationForm.LastExtendOverlandState;
       chkStopAtDisabled.Checked = UrbanDelineationForm.LastStopAtDisabledState;
@@ -212,7 +207,6 @@ namespace DHI.Urban.Delineation
 
           Delineator delineator = new Delineator();
           delineator.Setup = UrbanDelineationExtension.Extension.Setup;
-          delineator.Application = _application;
           delineator.OutletSource = cbxOutletSource.SelectedValue as IFeatureLayer;
           delineator.OutletIdField = cbxOutletField.SelectedValue as string;
           delineator.ExtendOverland = chkExtendOverland.Checked;
@@ -245,18 +239,15 @@ namespace DHI.Urban.Delineation
             _AddLabel(watershedLayer, delineator.OutletIdField);
           layers.Add(watershedLayer);
 
-          IMxDocument mxDocument = null;
           IMap map = null;
           try
           {
-            mxDocument = _application.Document as IMxDocument;
-            map = mxDocument.FocusMap;
+            map = ArcMap.Document.FocusMap;
             map.AddLayers(layers, true);
           }
           finally
           {
             UrbanDelineationExtension.ReleaseComObject(map);
-            UrbanDelineationExtension.ReleaseComObject(mxDocument);
           }
         }
       }

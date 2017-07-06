@@ -36,14 +36,12 @@ namespace DHI.Urban.Delineation
 {
   public partial class SetupForm : Form
   {
-    private IApplication _application;
     private IMxDocument _document;
     private IActiveView _activeView;
 
-    public SetupForm(IApplication application)
+    public SetupForm()
     {
-      _application = application;
-      _document = _application.Document as IMxDocument;
+      _document = ArcMap.Document;
       _activeView = _document.ActiveView;
 
       InitializeComponent();
@@ -51,38 +49,35 @@ namespace DHI.Urban.Delineation
 
     private void SetupForm_Load(object sender, EventArgs e)
     {
-      if (_application != null)
+      if (_document != null)
       {
-        if (_document != null)
-        {
-          _SetupDocumentEvents();
-        }
-
-        _UpdateComboBoxes();
-
-        // Retrieve saved layers
-        List<ILayer> layers = _GetLayers(_document);
-
-        SetupOp setupOp = UrbanDelineationExtension.Extension.Setup;
-        if (setupOp.GeometricNetwork != null)
-          cbxNetwork.SelectedValue = setupOp.GeometricNetwork;
-        ILayer inletLayer = _FindFeatureLayer(setupOp.InletClass, layers);
-        if (inletLayer != null)
-          cbxInlets.SelectedValue = inletLayer;
-        chkSmooth.Checked = setupOp.SmoothBoundaries;
-        ILayer demLayer = _FindRasterLayer(setupOp.DEM, layers);
-        if (demLayer != null)
-          cbxDEM.SelectedValue = demLayer;
-        chkIncludeUp.Checked = setupOp.IncludeUpstreamPipeEnds;
-        chkExcludeDisabled.Checked = setupOp.ExcludeDisabledNodes;
-        chkExcludeDown.Checked = setupOp.ExcludeDownstreamPipeEnds;
-        ILayer flowDirLayer = _FindRasterLayer(setupOp.FlowDirection, layers);
-        if (flowDirLayer != null)
-          cbxFlowDirGrid.SelectedValue = flowDirLayer;
-        ILayer catchmentLayer = _FindFeatureLayer(setupOp.Catchments, layers);
-        if (catchmentLayer != null)
-          cbxCatchments.SelectedValue = catchmentLayer;
+        _SetupDocumentEvents();
       }
+
+      _UpdateComboBoxes();
+
+      // Retrieve saved layers
+      List<ILayer> layers = _GetLayers(_document);
+
+      SetupOp setupOp = UrbanDelineationExtension.Extension.Setup;
+      if (setupOp.GeometricNetwork != null)
+        cbxNetwork.SelectedValue = setupOp.GeometricNetwork;
+      ILayer inletLayer = _FindFeatureLayer(setupOp.InletClass, layers);
+      if (inletLayer != null)
+        cbxInlets.SelectedValue = inletLayer;
+      chkSmooth.Checked = setupOp.SmoothBoundaries;
+      ILayer demLayer = _FindRasterLayer(setupOp.DEM, layers);
+      if (demLayer != null)
+        cbxDEM.SelectedValue = demLayer;
+      chkIncludeUp.Checked = setupOp.IncludeUpstreamPipeEnds;
+      chkExcludeDisabled.Checked = setupOp.ExcludeDisabledNodes;
+      chkExcludeDown.Checked = setupOp.ExcludeDownstreamPipeEnds;
+      ILayer flowDirLayer = _FindRasterLayer(setupOp.FlowDirection, layers);
+      if (flowDirLayer != null)
+        cbxFlowDirGrid.SelectedValue = flowDirLayer;
+      ILayer catchmentLayer = _FindFeatureLayer(setupOp.Catchments, layers);
+      if (catchmentLayer != null)
+        cbxCatchments.SelectedValue = catchmentLayer;
 
       _UpdateButtons();
     }
@@ -456,12 +451,10 @@ namespace DHI.Urban.Delineation
           ((ILayerEffects)catchmentLayer).Transparency = 50;
           layers.Add(catchmentLayer);
 
-          IMxDocument mxDocument = null;
           IMap map = null;
           try
           {
-            mxDocument = _application.Document as IMxDocument;
-            map = mxDocument.FocusMap;
+            map = ArcMap.Document.FocusMap;
             map.AddLayers(layers, true);
 
             cbxFlowDirGrid.SelectedValue = flowDirLayer;
@@ -470,7 +463,6 @@ namespace DHI.Urban.Delineation
           finally
           {
             UrbanDelineationExtension.ReleaseComObject(map);
-            UrbanDelineationExtension.ReleaseComObject(mxDocument);
           }
         }
       }
