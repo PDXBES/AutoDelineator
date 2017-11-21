@@ -17,8 +17,8 @@ namespace DHI.Urban.Delineation
       var geoprocessor = GeoprocessingUtility.GetGeoprocessor();
 
       var setNullTool = new ESRI.ArcGIS.SpatialAnalystTools.SetNull();
-      setNullTool.in_conditional_raster = GeoprocessingUtility.GetRasterPath(condition);
-      setNullTool.in_false_raster_or_constant = GeoprocessingUtility.GetRasterPath(falseRaster);
+      setNullTool.in_conditional_raster = GeoprocessingUtility.GetGPRasterObject(condition);
+      setNullTool.in_false_raster_or_constant = GeoprocessingUtility.GetGPRasterObject(falseRaster);
       setNullTool.out_raster = outputPath;
 
       string resultPath = GeoprocessingUtility.RunGpTool(geoprocessor, setNullTool) as string;
