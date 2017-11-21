@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.DataSourcesGDB;
 using ESRI.ArcGIS.DataSourcesRaster;
 using ESRI.ArcGIS.esriSystem;
@@ -138,6 +139,8 @@ namespace DHI.Urban.Delineation
       userOverwrite = null;
       workspace = null;
       scratchWorkspace = null;
+
+      esriUtility.RemoveInternalData();
     }
 
     /// <summary>
@@ -187,6 +190,7 @@ namespace DHI.Urban.Delineation
       }
       catch (Exception ex)
       {
+        System.Diagnostics.Debug.WriteLine(ex.GetType().FullName + ": " + ex.Message);
         throw;
       }
     }
@@ -204,10 +208,10 @@ namespace DHI.Urban.Delineation
 
         if (featureClass.FeatureDataset != null)
         {
-          path += "\\" + featureClass.FeatureDataset.Name;
+          path = System.IO.Path.Combine(path, featureClass.FeatureDataset.Name);
         }
 
-        path += "\\" + ((IDataset)featureClass).Name;
+        path = System.IO.Path.Combine(path, ((IDataset)featureClass).Name);
 
         var delimitedPath = "'" + path + "'";
         return delimitedPath;
@@ -250,24 +254,30 @@ namespace DHI.Urban.Delineation
     /// </summary>
     /// <param name="raster">The raster get the path for.</param>
     /// <returns>The fully qualified path to the raster.</returns>
-    public static string GetRasterPath(IRaster raster)
+    public static object GetGPRasterObject(IRaster raster)
     {
-      if (raster == null)
-      {
-        return string.Empty;
-      }
+      IRasterLayer layer = new RasterLayerClass();
+      layer.CreateFromRaster(raster);
+      esriUtility.AddInternalLayer(layer);
+      var gpLayer = esriUtility.MakeGPLayerFromLayer(layer);
+      return gpLayer;
 
-      IRasterDataset rasterDataset = ((IRasterAnalysisProps)raster).RasterDataset;
-      if (rasterDataset != null)
-      {
-        string path = ((IDataset)rasterDataset).Workspace.PathName;
-        path += "\\" + ((IDataset)rasterDataset).Name;
-        return path;
-      }
-      else
-      {
-        return string.Empty;
-      }
+      //if (raster == null)
+      //{
+      //  return string.Empty;
+      //}
+
+      //IRasterDataset rasterDataset = ((IRasterAnalysisProps)raster).RasterDataset;
+      //if (rasterDataset != null)
+      //{
+      //  string path = GetWorkspacePath(((IDataset)rasterDataset).Workspace);
+      //  path = System.IO.Path.Combine(path, ((IDataset)rasterDataset).Name);
+      //  return path;
+      //}
+      //else
+      //{
+      //  return string.Empty;
+      //}
     }
 
     /// <summary>
@@ -314,6 +324,7 @@ namespace DHI.Urban.Delineation
       for (int i = 0; i < e.GPMessages.Count; i++)
       {
         var message = e.GPMessages.GetMessage(i);
+        System.Diagnostics.Debug.WriteLine(message.Description);
       }
 
       e.GPMessages.Clear();
