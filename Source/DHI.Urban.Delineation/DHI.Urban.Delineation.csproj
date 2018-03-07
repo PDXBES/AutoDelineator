@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -69,8 +69,8 @@
       <SpecificVersion>False</SpecificVersion>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
-    <Reference Include="ESRI.ArcGIS.DataSourcesGDB, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+    <Reference Include="ESRI.ArcGIS.DataSourcesGDB, Version=10.5.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="ESRI.ArcGIS.DataSourcesRaster, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -81,6 +81,10 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="ESRI.ArcGIS.Display, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Editor, Version=10.5.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
@@ -110,7 +114,9 @@
     <Reference Include="ESRI.ArcGIS.SpatialAnalyst, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
     </Reference>
-    <Reference Include="ESRI.ArcGIS.SpatialAnalystTools, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL" />
+    <Reference Include="ESRI.ArcGIS.SpatialAnalystTools, Version=10.5.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.System, Version=10.3.0.0, Culture=neutral, PublicKeyToken=8fc3cc631e44ad86, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <EmbedInteropTypes>False</EmbedInteropTypes>
@@ -242,10 +248,10 @@
   <PropertyGroup>
     <ZipFileExtension>esriAddIn</ZipFileExtension>
     <AddInTargetProduct>Desktop</AddInTargetProduct>
-    <AddInTargetVersion>10.2</AddInTargetVersion>
+    <AddInTargetVersion>10.5</AddInTargetVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.11.targets" Condition="Exists('$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.11.targets')" />
+  <Import Project="$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.targets" Condition="Exists('$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -253,7 +259,7 @@
   -->
   <Target Name="AfterBuild">
     <!-- Gives build warning when add-in targets file is not found. -->
-    <Warning Text="Unable to create .esriAddin; missing ESRI ArcGIS Add-in SDK component(s)." Condition="!Exists('$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.11.targets')" />
+    <Warning Text="Unable to create .esriAddin; missing ESRI ArcGIS Add-in SDK component(s)." Condition="!Exists('$(MSBuildExtensionsPath)\ESRI\ESRI.ArcGIS.AddIns.targets')" />
   </Target>
   <ProjectExtensions>
     <!-- Default ESRI add-in properties -->

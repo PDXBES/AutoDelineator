@@ -1,10 +1,10 @@
-Install ArcGIS 10.1 with SP1 first.
+Install ArcGIS 10.5 first.
 
-Then, save the files in this directory anywhere on your C:\ drive.
+Then, save the files in this directory anywhere accessible by your computer (local drive or file share).
 
-Double-click on "InstallUrbanDelineation.bat".
+Double-click on "DHI.Urban.Delineation.esriAddIn".
 
-To uninstall, double-click on UninstallUrbanDelineation.bat.
+To uninstall, open ArcMap and select "Add-In Manager" from "Customize" menu, select the DHI.Urban.Delineation AddIn, and click "Delete this Add-In".
 
 Questions should be directed to Arnold Engelmann (ahe@dhigroup.com).
 
@@ -117,3 +117,13 @@ CHANGE LOG:
 - fixed issue with empty watershed geometries
 - improved delineation performance
 - correctly transfer numeric source ids (outlet label)
+
+1/27/2017
+- Updated for ArcGIS 10.3
+- Converted to ArcMap AddIn
+- Check for invalid geometry in inlet layer
+- Setup correct masking for DEM processing
+- Switched to use of more robust Geoprocessing Tools for certain operations.
+
+3/2/2018
+- Updated to target ArcGIS 10.5
