@@ -130,6 +130,20 @@ namespace DHI.Urban.Delineation
       {
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string tempPath = System.IO.Path.Combine(documents, "temp");
+        string configPath = System.IO.Path.Combine(tempPath, "UrbanDelineationScratchPath.txt");
+        //"C:\Users\ahe\OneDrive - DHI\Documents\temp\UrbanDelineationScratchPath.txt"
+        if(File.Exists(configPath))
+        {
+          using(StreamReader reader = new StreamReader(configPath))
+          {
+            string tempDir = reader.ReadLine();
+            if(Directory.Exists(tempDir))
+            {
+              return tempDir;
+            }
+          }
+        }
+
         return System.IO.Path.Combine(tempPath, "UrbanDelineation");
       }
     }
