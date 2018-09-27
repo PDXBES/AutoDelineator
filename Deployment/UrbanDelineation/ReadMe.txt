@@ -1,10 +1,8 @@
-Install ArcGIS 10.1 with SP1 first.
+Install ArcGIS 10.3.1 first.
 
-Then, save the files in this directory anywhere on your C:\ drive.
+Then, save the files in this directory to a local drive.
 
-Double-click on "InstallUrbanDelineation.bat".
-
-To uninstall, double-click on UninstallUrbanDelineation.bat.
+Double click the DHI.Urban.Delineation.esriAddIn to install the AddIn for ArcMap.
 
 Questions should be directed to Arnold Engelmann (ahe@dhigroup.com).
 
@@ -117,3 +115,19 @@ CHANGE LOG:
 - fixed issue with empty watershed geometries
 - improved delineation performance
 - correctly transfer numeric source ids (outlet label)
+
+1/27/2017
+- Converted to ESRI AddIn for easier deployment
+
+3/24/2017
+- Correctly set mask for DEM Fill operation
+- Fixed issue where a crash could occur when saving map
+
+4/12/2017
+- Switched to using geoprocessor module for some operations (improves stability)
+
+5/19/2017
+- Updated documentation
+
+11/21/2017
+- Fixed issue that led to error when using layers located on SDE server
