@@ -2,11 +2,11 @@
   <Name>DHI.Urban.Delineation</Name>
   <AddInID>{159adb30-7e36-4e4b-abdf-608c73e7f903}</AddInID>
   <Description>Urban catchment delineation using surface and sub-surface conveyance to trace water flow.</Description>
-  <Version>5.0</Version>
+  <Version>5.1</Version>
   <Image>Images\DHI.Urban.Delineation.png</Image>
   <Author>Arnold Engelmann</Author>
   <Company>DHI</Company>
-  <Date>1/26/2017</Date>
+  <Date>11/21/2017</Date>
   <Targets>
     <Target name="Desktop" version="10.3" />
   </Targets>
