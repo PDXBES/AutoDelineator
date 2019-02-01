@@ -49,6 +49,7 @@ namespace DHI.Urban.Delineation
     private Dictionary<int, List<IGeometry>> _catchmentShapes = null;
     private IFeatureClass _outletWatersheds;
     private List<IDataset> _tempDatasets = new List<IDataset>(); // Used to delay disposal of certain temp datasets.
+    private bool _useEidField = false;
 
     public Delineator()
     {
@@ -121,6 +122,15 @@ namespace DHI.Urban.Delineation
     {
       get { return _extendOverland; }
       set { _extendOverland = value; }
+    }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether any existing EID field should be used for EIDs instead of the internal EIDs from the Geometric Network
+    /// </summary>
+    public bool UseEIDField
+    {
+      get { return _useEidField; }
+      set { _useEidField = value; }
     }
 
     /// <summary>
@@ -1134,9 +1144,41 @@ namespace DHI.Urban.Delineation
       IFeatureLayer[] pJunctionLayers = _GetJunctionLayers();
       foreach (IFeatureLayer pJunctionLayer in pJunctionLayers)
       {
+        int eidField = pJunctionLayer.FeatureClass.FindField("EID");
+        var eidLookup = new Dictionary<int, int>();
+        if(_useEidField && eidField != -1)
+        {
+          var cursor = pJunctionLayer.FeatureClass.Search(null, false);
+          try
+          {
+            IFeature junction = cursor.NextFeature();
+            while(junction != null)
+            {
+              try
+              {
+                object dbValue = junction.get_Value(eidField);
+                if(dbValue != DBNull.Value)
+                {
+                  int eid = Convert.ToInt32(dbValue);
+                  eidLookup[junction.OID] = eid;
+                }
+              }
+              finally
+              {
+                UrbanDelineationExtension.ReleaseComObject(junction);
+              }
+
+              junction = cursor.NextFeature();
+            }
+          }
+          finally
+          {
+            UrbanDelineationExtension.ReleaseComObject(cursor);
+          }
+        }
+
         int iClassID = pJunctionLayer.FeatureClass.FeatureClassID;
         IEnumIDs pOIDs = ((IFeatureSelection)pJunctionLayer).SelectionSet.IDs;
-
         int iOID = pOIDs.Next();
         while (iOID != -1)
         {

@@ -210,6 +210,7 @@ namespace DHI.Urban.Delineation
           delineator.OutletSource = cbxOutletSource.SelectedValue as IFeatureLayer;
           delineator.OutletIdField = cbxOutletField.SelectedValue as string;
           delineator.ExtendOverland = chkExtendOverland.Checked;
+          delineator.UseEIDField = true;
           delineator.StopAtDisabledFeatures = chkStopAtDisabled.Checked;
 
           if (chkSnapToPourPoint.Enabled && chkSnapToPourPoint.Checked)
