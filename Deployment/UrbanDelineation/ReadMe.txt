@@ -1,4 +1,4 @@
-Install ArcGIS 10.3.1 first.
+Install ArcGIS 10.7.1 first.
 
 Then, save the files in this directory to a local drive.
 
@@ -7,6 +7,7 @@ Double click the DHI.Urban.Delineation.esriAddIn to install the AddIn for ArcMap
 Questions should be directed to Arnold Engelmann (ahe@dhigroup.com).
 
 CHANGE LOG:
+
 
 10/26/2007
 - Initial release.
@@ -131,3 +132,6 @@ CHANGE LOG:
 
 11/21/2017
 - Fixed issue that led to error when using layers located on SDE server
+
+10/18/2019
+- Updated for ArcGIS 10.7.1
