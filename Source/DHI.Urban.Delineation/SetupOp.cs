@@ -696,41 +696,29 @@ namespace DHI.Urban.Delineation
       IHydrologyOp hydroOp = new RasterHydrologyOpClass();
       IRasterMakerOp rasterMaker = new RasterMakerOpClass();
       ILogicalOp logicalOp = new RasterMathOpsClass();
-      IConditionalOp conditionalOp = new RasterConditionalOpClass();
-      IGeoDataset fillTemp = null;
       IGeoDataset flowTemp = null;
-      IGeoDataset flowTemp2 = null;
+      IRaster flowTemp2 = null;
       IGeoDataset demNulls = null;
       IGeoDataset zeroRaster = null;
-      IWorkspace resultWorkspace = null;
       try
       {
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)hydroOp);
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)rasterMaker);
-        SetAnalysisEnvironment((IRasterAnalysisEnvironment)conditionalOp);
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)logicalOp);
 
-        object zLimit = null;
-        fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
-
-        //Make output permanent
-        resultWorkspace = GetResultRasterWorkspace();
-        ITemporaryDataset tempFillDataset = ((IRasterAnalysisProps)fillTemp).RasterDataset as ITemporaryDataset;
         string fillPath = CreateTempFileName(_GetResultDir(), "filldem", "");
-        string fillFileName = System.IO.Path.GetFileName(fillPath);
-        tempFillDataset.MakePermanentAs(fillFileName, resultWorkspace, "GRID");
-        _filledDEM = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(fillFileName).CreateDefaultRaster() as IRaster;
+        _filledDEM = GeoprocessingTools.Fill(_punchedDEM, fillPath);
 
         OnProgress("Calculating flow direction...");
-        flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
+        flowTemp = hydroOp.FlowDirection((IGeoDataset)_filledDEM, false, true);
 
         //Set holes to flowdir of 0
-        object boxedFlowTemp = flowTemp;
         zeroRaster = rasterMaker.MakeConstant(0.0, true);
-        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)fillTemp), zeroRaster, ref boxedFlowTemp);
+        string flowTemp2Path = CreateTempFileName(_GetTempDir(), "flowtemp2", "");
+        flowTemp2 = GeoprocessingTools.Con((IRaster)logicalOp.IsNull((IGeoDataset)_filledDEM), (IRaster)zeroRaster, (IRaster)flowTemp, flowTemp2Path);
         demNulls = logicalOp.IsNull((IGeoDataset)_dem);
         string flowPath = CreateTempFileName(_GetResultDir(), "flowdir", "");
-        _flowDir = GeoprocessingTools.SetNull((IRaster)demNulls, (IRaster)flowTemp2, flowPath);
+        _flowDir = GeoprocessingTools.SetNull((IRaster)demNulls, flowTemp2, flowPath);
       }
       finally
       {
@@ -738,11 +726,9 @@ namespace DHI.Urban.Delineation
         UrbanDelineationExtension.ReleaseComObject(flowTemp2);
         UrbanDelineationExtension.ReleaseComObject(demNulls);
         UrbanDelineationExtension.ReleaseComObject(zeroRaster);
-        UrbanDelineationExtension.ReleaseComObject(conditionalOp);
         UrbanDelineationExtension.ReleaseComObject(logicalOp);
         UrbanDelineationExtension.ReleaseComObject(rasterMaker);
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
-        UrbanDelineationExtension.ReleaseComObject(resultWorkspace);
       }
 
       OnProgress("Flow direction calculated.");
