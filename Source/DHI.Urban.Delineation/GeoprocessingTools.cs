@@ -79,5 +79,34 @@ namespace DHI.Urban.Delineation
 
       return outputRaster;
     }
+
+    public static IRaster Watershed(IRaster flowDir, IFeatureClass pourPoints, string outputPath)
+    {
+      string pourPointsPath = GeoprocessingUtility.GetFeatureClassPath(pourPoints);
+      return _InternalWatershed(flowDir, pourPoints, outputPath);
+    }
+
+    public static IRaster Watershed(IRaster flowDir, IRaster pourPoints, string outputPath)
+    {
+      var pourPointsObject = GeoprocessingUtility.GetGPRasterObject(pourPoints);
+      return _InternalWatershed(flowDir, pourPointsObject, outputPath);
+    }
+
+    private static IRaster _InternalWatershed(IRaster flowDir, object pourPoints, string outputPath)
+    {
+      var geoprocessor = GeoprocessingUtility.GetGeoprocessor(true, false, true, flowDir);
+
+      var watershedTool = new ESRI.ArcGIS.SpatialAnalystTools.Watershed();
+      watershedTool.in_flow_direction_raster = GeoprocessingUtility.GetGPRasterObject(flowDir);
+      watershedTool.in_pour_point_data = pourPoints;
+      watershedTool.out_raster = outputPath;
+
+      string resultPath = GeoprocessingUtility.RunGpTool(geoprocessor, watershedTool) as string;
+      IRaster outputRaster = GeoprocessingUtility.GetRasterFromPath(resultPath);
+
+      GeoprocessingUtility.ResetGeoprocessor();
+
+      return outputRaster;
+    }
   }
 }

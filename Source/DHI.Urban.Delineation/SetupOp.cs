@@ -745,38 +745,31 @@ namespace DHI.Urban.Delineation
       string outputNameDetailed = System.IO.Path.GetFileNameWithoutExtension(outputPathDetailed);
 
       //Calculate catchments
-      IHydrologyOp hydroOp = new RasterHydrologyOpClass();
-      IGeoDataset seedGrid = null;
-      IGeoDataset catchmentGrid = null;
-      try
-      {
-        SetAnalysisEnvironment((IRasterAnalysisEnvironment)hydroOp);
-        seedGrid = (IGeoDataset)_DrainagePointsToSeedGrid(_drainClass, "SeedPts", SetupOp.EID_FIELD_NAME);
-        catchmentGrid = hydroOp.Watershed((IGeoDataset)_flowDir, seedGrid);
-        OnProgress("Converting catchments to polygon...");
-        IFeatureClass smoothCatchmentClass = RasterToPolygon(catchmentGrid, outputNameSmooth, outputDir, true);
-        IFeatureClass detailedCatchmentClass = RasterToPolygon(catchmentGrid, outputNameDetailed, outputDir, false);
+      IRaster seedGrid = _DrainagePointsToSeedGrid(_drainClass, "SeedPts", SetupOp.EID_FIELD_NAME);
+      string watershedPath = CreateTempFileName(_GetTempDir(), "inletws", "");
+      IRaster catchmentGrid = GeoprocessingTools.Watershed(_flowDir, seedGrid, watershedPath);
+      OnProgress("Converting catchments to polygon...");
+      IFeatureClass smoothCatchmentClass = RasterToPolygon(catchmentGrid, outputNameSmooth, outputDir, true);
+      IFeatureClass detailedCatchmentClass = RasterToPolygon(catchmentGrid, outputNameDetailed, outputDir, false);
 
-        if (_smooth)
-        {
-          _catchmentClass = smoothCatchmentClass;
-        }
-        else
-        {
-          _catchmentClass = detailedCatchmentClass;
-        }
-
-        _MarkForDisposal((IDataset)seedGrid);
-        _MarkForDisposal(catchmentGrid as IDataset);
-      }
-      finally
+      if (_smooth)
       {
-        UrbanDelineationExtension.ReleaseComObject(hydroOp);
+        _catchmentClass = smoothCatchmentClass;
       }
+      else
+      {
+        _catchmentClass = detailedCatchmentClass;
+      }
+
+      var seedDataset = ((IRasterAnalysisProps)seedGrid).RasterDataset;
+      _MarkForDisposal((IDataset)seedDataset);
+      var catchmentDataset = ((IRasterAnalysisProps)catchmentGrid).RasterDataset;
+      _MarkForDisposal(catchmentGrid as IDataset);
+
       OnProgress("Inlet catchments delineated.");
     }
 
-    private IRasterDataset _DrainagePointsToSeedGrid(IFeatureClass featureClass, string baseName, string valueField)
+    private IRaster _DrainagePointsToSeedGrid(IFeatureClass featureClass, string baseName, string valueField)
     {
       Geoprocessor gp = new Geoprocessor();
       bool addOutputs = gp.AddOutputsToMap;
@@ -811,7 +804,7 @@ namespace DHI.Urban.Delineation
         RunTool(gp, featureToRasterTool, null);
 
         IRasterWorkspace rws = this.GetTempRasterWorkspace() as IRasterWorkspace;
-        return rws.OpenRasterDataset(outputShortName);
+        return rws.OpenRasterDataset(outputShortName).CreateDefaultRaster();
       }
       finally
       {
@@ -837,7 +830,7 @@ namespace DHI.Urban.Delineation
       }
     }
 
-    internal IFeatureClass RasterToPolygon(IGeoDataset inputRaster, string outputName, string outputDir, bool smoothShapes)
+    internal IFeatureClass RasterToPolygon(IRaster inputRaster, string outputName, string outputDir, bool smoothShapes)
     {
       IWorkspace workspace = SetupOp.OpenShapeFileWorkspace(outputDir);
       IConversionOp conversionOp = new RasterConversionOpClass();
@@ -873,7 +866,7 @@ namespace DHI.Urban.Delineation
 
         //Convert to polygon feature
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)conversionOp);
-        IGeoDataset polygons = conversionOp.RasterDataToPolygonFeatureData(inputRaster, workspace, outputName, smoothShapes);
+        IGeoDataset polygons = conversionOp.RasterDataToPolygonFeatureData((IGeoDataset)inputRaster, workspace, outputName, smoothShapes);
         return (IFeatureClass)polygons;
       }
       finally
