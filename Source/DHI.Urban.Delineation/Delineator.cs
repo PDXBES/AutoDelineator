@@ -1136,19 +1136,19 @@ namespace DHI.Urban.Delineation
 
     private int[] _GetSelectedJunctions()
     {
-      List<int> lstJunctionIDs = new List<int>();
+      List<int> junctionIds = new List<int>();
       IGeometricNetwork pGeoNetwork = _setupOp.GeometricNetwork;
       INetElements pNetElements = pGeoNetwork.Network as INetElements;
 
       //Get Selected Junction IDs
       IFeatureLayer[] pJunctionLayers = _GetJunctionLayers();
-      foreach (IFeatureLayer pJunctionLayer in pJunctionLayers)
+      foreach (IFeatureLayer junctionLayer in pJunctionLayers)
       {
-        int eidField = pJunctionLayer.FeatureClass.FindField("EID");
+        int eidField = junctionLayer.FeatureClass.FindField("EID");
         var eidLookup = new Dictionary<int, int>();
         if(_useEidField && eidField != -1)
         {
-          var cursor = pJunctionLayer.FeatureClass.Search(null, false);
+          var cursor = junctionLayer.FeatureClass.Search(null, false);
           try
           {
             IFeature junction = cursor.NextFeature();
@@ -1177,21 +1177,28 @@ namespace DHI.Urban.Delineation
           }
         }
 
-        int iClassID = pJunctionLayer.FeatureClass.FeatureClassID;
-        IEnumIDs pOIDs = ((IFeatureSelection)pJunctionLayer).SelectionSet.IDs;
-        int iOID = pOIDs.Next();
-        while (iOID != -1)
+        int iClassID = junctionLayer.FeatureClass.FeatureClassID;
+        IEnumIDs oids = ((IFeatureSelection)junctionLayer).SelectionSet.IDs;
+        int oid = oids.Next();
+        while (oid != -1)
         {
-          int junctionId = pNetElements.GetEID(iClassID, iOID, -1, esriElementType.esriETJunction);
-          lstJunctionIDs.Add(junctionId);
-          iOID = pOIDs.Next();
+          if(_useEidField)
+          {
+            junctionIds.Add(eidLookup[oid]);
+          }
+          else
+          {
+            int junctionId = pNetElements.GetEID(iClassID, oid, -1, esriElementType.esriETJunction);
+            junctionIds.Add(junctionId);
+          }
+          oid = oids.Next();
         }
       }
 
       //TODO: Add downstream junctions from selected edges (but only delineate up the selected edge)
       //List<int> lstEdgeClassIDs = _GetNetworkClassIDs(pGeoNetwork, esriFeatureType.esriFTSimpleEdge);
 
-      return lstJunctionIDs.ToArray();
+      return junctionIds.ToArray();
     }
 
     private IFeatureLayer[] _GetJunctionLayers()
