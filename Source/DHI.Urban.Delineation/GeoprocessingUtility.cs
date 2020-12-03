@@ -261,23 +261,6 @@ namespace DHI.Urban.Delineation
       esriUtility.AddInternalLayer(layer);
       var gpLayer = esriUtility.MakeGPLayerFromLayer(layer);
       return gpLayer;
-
-      //if (raster == null)
-      //{
-      //  return string.Empty;
-      //}
-
-      //IRasterDataset rasterDataset = ((IRasterAnalysisProps)raster).RasterDataset;
-      //if (rasterDataset != null)
-      //{
-      //  string path = GetWorkspacePath(((IDataset)rasterDataset).Workspace);
-      //  path = System.IO.Path.Combine(path, ((IDataset)rasterDataset).Name);
-      //  return path;
-      //}
-      //else
-      //{
-      //  return string.Empty;
-      //}
     }
 
     /// <summary>

@@ -696,41 +696,29 @@ namespace DHI.Urban.Delineation
       IHydrologyOp hydroOp = new RasterHydrologyOpClass();
       IRasterMakerOp rasterMaker = new RasterMakerOpClass();
       ILogicalOp logicalOp = new RasterMathOpsClass();
-      IConditionalOp conditionalOp = new RasterConditionalOpClass();
-      IGeoDataset fillTemp = null;
       IGeoDataset flowTemp = null;
-      IGeoDataset flowTemp2 = null;
+      IRaster flowTemp2 = null;
       IGeoDataset demNulls = null;
       IGeoDataset zeroRaster = null;
-      IWorkspace resultWorkspace = null;
       try
       {
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)hydroOp);
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)rasterMaker);
-        SetAnalysisEnvironment((IRasterAnalysisEnvironment)conditionalOp);
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)logicalOp);
 
-        object zLimit = null;
-        fillTemp = hydroOp.Fill((IGeoDataset)_punchedDEM, ref zLimit);
-
-        //Make output permanent
-        resultWorkspace = GetResultRasterWorkspace();
-        ITemporaryDataset tempFillDataset = ((IRasterAnalysisProps)fillTemp).RasterDataset as ITemporaryDataset;
         string fillPath = CreateTempFileName(_GetResultDir(), "filldem", "");
-        string fillFileName = System.IO.Path.GetFileName(fillPath);
-        tempFillDataset.MakePermanentAs(fillFileName, resultWorkspace, "GRID");
-        _filledDEM = ((IRasterWorkspace)resultWorkspace).OpenRasterDataset(fillFileName).CreateDefaultRaster() as IRaster;
+        _filledDEM = GeoprocessingTools.Fill(_punchedDEM, fillPath);
 
         OnProgress("Calculating flow direction...");
-        flowTemp = hydroOp.FlowDirection((IGeoDataset)fillTemp, false, true);
+        flowTemp = hydroOp.FlowDirection((IGeoDataset)_filledDEM, false, true);
 
         //Set holes to flowdir of 0
-        object boxedFlowTemp = flowTemp;
         zeroRaster = rasterMaker.MakeConstant(0.0, true);
-        flowTemp2 = conditionalOp.Con(logicalOp.IsNull((IGeoDataset)fillTemp), zeroRaster, ref boxedFlowTemp);
+        string flowTemp2Path = CreateTempFileName(_GetTempDir(), "flowtemp2", "");
+        flowTemp2 = GeoprocessingTools.Con((IRaster)logicalOp.IsNull((IGeoDataset)_filledDEM), (IRaster)zeroRaster, (IRaster)flowTemp, flowTemp2Path);
         demNulls = logicalOp.IsNull((IGeoDataset)_dem);
         string flowPath = CreateTempFileName(_GetResultDir(), "flowdir", "");
-        _flowDir = GeoprocessingTools.SetNull((IRaster)demNulls, (IRaster)flowTemp2, flowPath);
+        _flowDir = GeoprocessingTools.SetNull((IRaster)demNulls, flowTemp2, flowPath);
       }
       finally
       {
@@ -738,11 +726,9 @@ namespace DHI.Urban.Delineation
         UrbanDelineationExtension.ReleaseComObject(flowTemp2);
         UrbanDelineationExtension.ReleaseComObject(demNulls);
         UrbanDelineationExtension.ReleaseComObject(zeroRaster);
-        UrbanDelineationExtension.ReleaseComObject(conditionalOp);
         UrbanDelineationExtension.ReleaseComObject(logicalOp);
         UrbanDelineationExtension.ReleaseComObject(rasterMaker);
         UrbanDelineationExtension.ReleaseComObject(hydroOp);
-        UrbanDelineationExtension.ReleaseComObject(resultWorkspace);
       }
 
       OnProgress("Flow direction calculated.");
@@ -759,38 +745,31 @@ namespace DHI.Urban.Delineation
       string outputNameDetailed = System.IO.Path.GetFileNameWithoutExtension(outputPathDetailed);
 
       //Calculate catchments
-      IHydrologyOp hydroOp = new RasterHydrologyOpClass();
-      IGeoDataset seedGrid = null;
-      IGeoDataset catchmentGrid = null;
-      try
-      {
-        SetAnalysisEnvironment((IRasterAnalysisEnvironment)hydroOp);
-        seedGrid = (IGeoDataset)_DrainagePointsToSeedGrid(_drainClass, "SeedPts", SetupOp.EID_FIELD_NAME);
-        catchmentGrid = hydroOp.Watershed((IGeoDataset)_flowDir, seedGrid);
-        OnProgress("Converting catchments to polygon...");
-        IFeatureClass smoothCatchmentClass = RasterToPolygon(catchmentGrid, outputNameSmooth, outputDir, true);
-        IFeatureClass detailedCatchmentClass = RasterToPolygon(catchmentGrid, outputNameDetailed, outputDir, false);
+      IRaster seedGrid = _DrainagePointsToSeedGrid(_drainClass, "SeedPts", SetupOp.EID_FIELD_NAME);
+      string watershedPath = CreateTempFileName(_GetTempDir(), "inletws", "");
+      IRaster catchmentGrid = GeoprocessingTools.Watershed(_flowDir, seedGrid, watershedPath);
+      OnProgress("Converting catchments to polygon...");
+      IFeatureClass smoothCatchmentClass = RasterToPolygon(catchmentGrid, outputNameSmooth, outputDir, true);
+      IFeatureClass detailedCatchmentClass = RasterToPolygon(catchmentGrid, outputNameDetailed, outputDir, false);
 
-        if (_smooth)
-        {
-          _catchmentClass = smoothCatchmentClass;
-        }
-        else
-        {
-          _catchmentClass = detailedCatchmentClass;
-        }
-
-        _MarkForDisposal((IDataset)seedGrid);
-        _MarkForDisposal(catchmentGrid as IDataset);
-      }
-      finally
+      if (_smooth)
       {
-        UrbanDelineationExtension.ReleaseComObject(hydroOp);
+        _catchmentClass = smoothCatchmentClass;
       }
+      else
+      {
+        _catchmentClass = detailedCatchmentClass;
+      }
+
+      var seedDataset = ((IRasterAnalysisProps)seedGrid).RasterDataset;
+      _MarkForDisposal((IDataset)seedDataset);
+      var catchmentDataset = ((IRasterAnalysisProps)catchmentGrid).RasterDataset;
+      _MarkForDisposal(catchmentGrid as IDataset);
+
       OnProgress("Inlet catchments delineated.");
     }
 
-    private IRasterDataset _DrainagePointsToSeedGrid(IFeatureClass featureClass, string baseName, string valueField)
+    private IRaster _DrainagePointsToSeedGrid(IFeatureClass featureClass, string baseName, string valueField)
     {
       Geoprocessor gp = new Geoprocessor();
       bool addOutputs = gp.AddOutputsToMap;
@@ -825,7 +804,7 @@ namespace DHI.Urban.Delineation
         RunTool(gp, featureToRasterTool, null);
 
         IRasterWorkspace rws = this.GetTempRasterWorkspace() as IRasterWorkspace;
-        return rws.OpenRasterDataset(outputShortName);
+        return rws.OpenRasterDataset(outputShortName).CreateDefaultRaster();
       }
       finally
       {
@@ -851,7 +830,7 @@ namespace DHI.Urban.Delineation
       }
     }
 
-    internal IFeatureClass RasterToPolygon(IGeoDataset inputRaster, string outputName, string outputDir, bool smoothShapes)
+    internal IFeatureClass RasterToPolygon(IRaster inputRaster, string outputName, string outputDir, bool smoothShapes)
     {
       IWorkspace workspace = SetupOp.OpenShapeFileWorkspace(outputDir);
       IConversionOp conversionOp = new RasterConversionOpClass();
@@ -887,7 +866,7 @@ namespace DHI.Urban.Delineation
 
         //Convert to polygon feature
         SetAnalysisEnvironment((IRasterAnalysisEnvironment)conversionOp);
-        IGeoDataset polygons = conversionOp.RasterDataToPolygonFeatureData(inputRaster, workspace, outputName, smoothShapes);
+        IGeoDataset polygons = conversionOp.RasterDataToPolygonFeatureData((IGeoDataset)inputRaster, workspace, outputName, smoothShapes);
         return (IFeatureClass)polygons;
       }
       finally
