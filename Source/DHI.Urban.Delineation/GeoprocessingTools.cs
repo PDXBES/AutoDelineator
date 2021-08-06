@@ -92,6 +92,11 @@ namespace DHI.Urban.Delineation
       return _InternalWatershed(flowDir, pourPointsObject, outputPath);
     }
 
+    public static IRaster Watershed(IRaster flowDir, IGeoDataset pourPoints, string outputPath)
+    {
+      return _InternalWatershed(flowDir, pourPoints, outputPath);
+    }
+
     private static IRaster _InternalWatershed(IRaster flowDir, object pourPoints, string outputPath)
     {
       var geoprocessor = GeoprocessingUtility.GetGeoprocessor(true, false, true, flowDir);
@@ -102,6 +107,23 @@ namespace DHI.Urban.Delineation
       watershedTool.out_raster = outputPath;
 
       string resultPath = GeoprocessingUtility.RunGpTool(geoprocessor, watershedTool) as string;
+      IRaster outputRaster = GeoprocessingUtility.GetRasterFromPath(resultPath);
+
+      GeoprocessingUtility.ResetGeoprocessor();
+
+      return outputRaster;
+    }
+
+    public static IRaster SnapPourPoint(IGeoDataset seedClass, IGeoDataset flowAccumulation, double snapDistance)
+    {
+      var geoprocessor = GeoprocessingUtility.GetGeoprocessor();
+
+      var snapPourPointTool = new ESRI.ArcGIS.SpatialAnalystTools.SnapPourPoint();
+      snapPourPointTool.in_pour_point_data = seedClass;
+      snapPourPointTool.in_accumulation_raster = flowAccumulation;
+      snapPourPointTool.snap_distance = snapDistance;
+
+      string resultPath = GeoprocessingUtility.RunGpTool(geoprocessor, snapPourPointTool) as string;
       IRaster outputRaster = GeoprocessingUtility.GetRasterFromPath(resultPath);
 
       GeoprocessingUtility.ResetGeoprocessor();

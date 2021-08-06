@@ -277,7 +277,7 @@ namespace DHI.Urban.Delineation
 
         IGeoDataset flowAcc = null;
         IRaster seedRaster = null;
-        IFeatureClass seedPoints = null;
+        IGeoDataset seedPoints = null;
         IRaster watersheds = null;
         IFeatureClass watershedClass = null;
         try
@@ -300,7 +300,7 @@ namespace DHI.Urban.Delineation
           {
             object missing = Type.Missing;
             flowAcc = hydrologyOp.FlowAccumulation((IGeoDataset)_setupOp.FlowDirection, ref missing);
-            seedPoints = hydrologyOp.SnapPourPoint((IGeoDataset)sourceDescriptor, flowAcc, _snapDistance) as IFeatureClass;
+            seedPoints = hydrologyOp.SnapPourPoint((IGeoDataset)sourceDescriptor, flowAcc, _snapDistance);
             watersheds = GeoprocessingTools.Watershed(_setupOp.FlowDirection, seedPoints, watershedPath);
           }
           else
