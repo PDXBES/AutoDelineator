@@ -276,8 +276,9 @@ namespace DHI.Urban.Delineation
         }
 
         IGeoDataset flowAcc = null;
-        IGeoDataset seedRaster = null;
-        IGeoDataset watersheds = null;
+        IRaster seedRaster = null;
+        IGeoDataset seedPoints = null;
+        IRaster watersheds = null;
         IFeatureClass watershedClass = null;
         try
         {
@@ -294,20 +295,21 @@ namespace DHI.Urban.Delineation
             sourceDescriptor.Create(_sourceLayer.FeatureClass, null, _sourceLayer.FeatureClass.OIDFieldName);
           }
 
+          string watershedPath = SetupOp.CreateTempFileName(tempWorkspace.PathName, "inletws", "");
           if (snap)
           {
             object missing = Type.Missing;
             flowAcc = hydrologyOp.FlowAccumulation((IGeoDataset)_setupOp.FlowDirection, ref missing);
-            seedRaster = hydrologyOp.SnapPourPoint((IGeoDataset)sourceDescriptor, flowAcc, _snapDistance);
+            seedPoints = hydrologyOp.SnapPourPoint((IGeoDataset)sourceDescriptor, flowAcc, _snapDistance);
+            watersheds = GeoprocessingTools.Watershed(_setupOp.FlowDirection, seedPoints, watershedPath);
           }
           else
           {
             string gridPath = SetupOp.CreateTempFileName(_setupOp.ScratchDirectory, "SrcSeed", null);
             string gridName = System.IO.Path.GetFileName(gridPath);
-            seedRaster = (IGeoDataset)conversionOp.ToRasterDataset((IGeoDataset)sourceDescriptor, "GRID", tempWorkspace, gridName);
+            seedRaster = conversionOp.ToRasterDataset((IGeoDataset)sourceDescriptor, "GRID", tempWorkspace, gridName).CreateDefaultRaster();
+            watersheds = GeoprocessingTools.Watershed(_setupOp.FlowDirection, seedRaster, watershedPath);
           }
-
-          watersheds = hydrologyOp.Watershed((IGeoDataset)_setupOp.FlowDirection, (IGeoDataset)seedRaster);
           watershedClass = _setupOp.RasterToPolygon(watersheds, outputName, _setupOp.ScratchDirectory, true);
 
           int gridCodeField = watershedClass.FindField("GridCode");
@@ -339,6 +341,10 @@ namespace DHI.Urban.Delineation
           if (seedRaster is IDataset && ((IDataset)seedRaster).CanDelete())
             ((IDataset)seedRaster).Delete();
           UrbanDelineationExtension.ReleaseComObject(seedRaster);
+
+          if (seedPoints is IDataset && ((IDataset)seedRaster).CanDelete())
+            ((IDataset)seedPoints).Delete();
+          UrbanDelineationExtension.ReleaseComObject(seedPoints);
 
           if (flowAcc is IDataset && ((IDataset)flowAcc).CanDelete())
             ((IDataset)flowAcc).Delete();
